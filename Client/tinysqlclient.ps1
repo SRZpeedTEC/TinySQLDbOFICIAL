@@ -5,39 +5,41 @@ param (
     [int]$Port
 )
 
-$eomToken = "<EOM>";
 $ipEndPoint = [System.Net.IPEndPoint]::new([System.Net.IPAddress]::Parse("127.0.0.1"), 11000)
 
 function Send-Message {
     param (
-        [System.Net.Sockets.Socket]$client,
-        [string]$message
+        [Parameter(Mandatory=$true)]
+        [pscustomobject]$message,
+        [Parameter(Mandatory=$true)]
+        [System.Net.Sockets.Socket]$client
     )
-    $message += "<EOM>"; #Append token to indicate end of message
-    $messageBytes = [System.Text.Encoding]::UTF8.GetBytes($message)
-    $client.Send($messageBytes, [System.Net.Sockets.SocketFlags]::None)
+
+    $stream = New-Object System.Net.Sockets.NetworkStream($client)
+    $writer = New-Object System.IO.StreamWriter($stream)
+    try {
+        $writer.WriteLine($message)
+    }
+    finally {
+        $writer.Close()
+        $stream.Close()
+    }
 }
 
 function Receive-Message {
     param (
         [System.Net.Sockets.Socket]$client
     )
-    $stringBuilder = New-Object System.Text.StringBuilder
-    $eom = $false
-    do {
-        $buffer = New-Object byte[] 1024
-        $received = $client.Receive($buffer, [System.Net.Sockets.SocketFlags]::None)
-        $response = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $received)
-        if ($response.EndsWith($eomToken)) {
-            $eom = $true;
-            $response = $response.Replace($eomToken, "")
-        }
-        [void]$stringBuilder.Append($response)
-    } while ($eom -eq $false -and $response.Length -gt -1);
-
-    return $stringBuilder;
+    $stream = New-Object System.Net.Sockets.NetworkStream($client)
+    $reader = New-Object System.IO.StreamReader($stream)
+    try {
+        return $null -ne $reader.ReadLine ? $reader.ReadLine() : ""
+    }
+    finally {
+        $reader.Close()
+        $stream.Close()
+    }
 }
-
 function Send-SQLCommand {
     param (
         [string]$command
@@ -50,7 +52,7 @@ function Send-SQLCommand {
     }
     Write-Host -ForegroundColor Green "Sending command: $command"
 
-    $jsonMessage = ConvertTo-Json -InputObject $requestObject
+    $jsonMessage = ConvertTo-Json -InputObject $requestObject -Compress
     Send-Message -client $client -message $jsonMessage
     $response = Receive-Message -client $client
 

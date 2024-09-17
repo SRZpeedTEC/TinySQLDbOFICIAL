@@ -13,7 +13,6 @@ namespace ApiInterface
     {
         private static IPEndPoint serverEndPoint = new(IPAddress.Loopback, 11000);
         private static int supportedParallelConnections = 1;
-        private const string eomToken = "<EOM>";
 
         public static async Task Start()
         {
@@ -27,10 +26,10 @@ namespace ApiInterface
                 var handler = await listener.AcceptAsync();
                 try
                 {
-                    var rawMessage = await GetMessage(handler);
-                    var requestObject = await ConvertToRequestObject(rawMessage);
+                    var rawMessage = GetMessage(handler);
+                    var requestObject = ConvertToRequestObject(rawMessage);
                     var response = ProcessRequest(requestObject);
-                    await SendResponse(response, handler);
+                    SendResponse(response, handler);
                 }
                 catch (Exception ex)
                 {
@@ -44,32 +43,18 @@ namespace ApiInterface
             }
         }
 
-        private static async Task<string> GetMessage(Socket handler)
+        private static string GetMessage(Socket handler)
         {
-            var buffer = new byte[1024];
-            var response = new StringBuilder();
-            var received = -1;
-            var eom = false;           
-            do
+            using (NetworkStream stream = new NetworkStream(handler))
+            using (StreamReader reader = new StreamReader(stream))
             {
-                received = await handler.ReceiveAsync(buffer, SocketFlags.None);
-                var partialResponse = Encoding.UTF8.GetString(buffer, 0, received);
-                if (partialResponse.EndsWith(eomToken))
-                {
-                    partialResponse = partialResponse.Remove(partialResponse.Length - eomToken.Length);
-                    eom = true;
-                }
-                response.Append(partialResponse);                
+                return reader.ReadLine() ?? String.Empty;
             }
-            while (!eom && received > 0);
-
-            return response.ToString();
         }
 
-        private static Task<Request> ConvertToRequestObject(string rawMessage)
+        private static Request ConvertToRequestObject(string rawMessage)
         {
-            return Task.FromResult(
-                JsonSerializer.Deserialize<Request>(rawMessage) ?? throw new InvalidRequestException());
+            return JsonSerializer.Deserialize<Request>(rawMessage) ?? throw new InvalidRequestException();
         }
 
         private static Response ProcessRequest(Request requestObject)
@@ -78,11 +63,13 @@ namespace ApiInterface
             return processor.Process();
         }
 
-        private static async Task SendResponse(Response response, Socket handler)
+        private static void SendResponse(Response response, Socket handler)
         {
-            var json = JsonSerializer.Serialize(response) + eomToken;
-            var bytes = Encoding.UTF8.GetBytes(json);
-            await handler.SendAsync(bytes, 0);
+            using (NetworkStream stream = new NetworkStream(handler))
+            using (StreamWriter writer = new StreamWriter(stream))
+            {
+                writer.WriteLine(JsonSerializer.Serialize(response));
+            }
         }
 
         private static Task SendErrorResponse(string reason, Socket handler)
