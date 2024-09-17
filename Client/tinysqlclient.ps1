@@ -5,7 +5,7 @@ param (
     [int]$Port
 )
 
-$ipEndPoint = [System.Net.IPEndPoint]::new([System.Net.IPAddress]::Parse("127.0.0.1"), 11000)
+$ipEndPoint = [System.Net.IPEndPoint]::new([System.Net.IPAddress]::Parse($IP), $Port)
 
 function Send-Message {
     param (
