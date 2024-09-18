@@ -23,7 +23,7 @@ namespace ApiInterface.Processors
             {
                 Status = result,
                 Request = this.Request,
-                ResponseBody = string.Empty
+                ResponseBody = "Comando Ejecutado" // Aqui se envia la informacion de la respuesta
             };
         }
     }

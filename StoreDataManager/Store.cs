@@ -40,6 +40,19 @@ namespace StoreDataManager
             Directory.CreateDirectory(SystemCatalogPath);
         }
 
+
+        public OperationStatus CreateDataBase(string DataBaseName)
+        {
+
+            // Creates a default DB called TESTDB
+            Directory.CreateDirectory($@"{DataPath}\{DataBaseName}");
+
+            Console.WriteLine("Database created successfully");            
+
+            return OperationStatus.Success;
+        }
+
+
         public OperationStatus CreateTable()
         {
             // Creates a default DB called TESTDB
