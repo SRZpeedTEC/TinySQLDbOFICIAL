@@ -44,21 +44,33 @@ function Send-SQLCommand {
     param (
         [string]$command
     )
+
     $client = New-Object System.Net.Sockets.Socket($ipEndPoint.AddressFamily, [System.Net.Sockets.SocketType]::Stream, [System.Net.Sockets.ProtocolType]::Tcp)
     $client.Connect($ipEndPoint)
+    
     $requestObject = [PSCustomObject]@{
         RequestType = 0;
-        RequestBody = $command
+        RequestBody  = $command
     }
+
     Write-Host -ForegroundColor Green "Sending command: $command"
 
     $jsonMessage = ConvertTo-Json -InputObject $requestObject -Compress
     Send-Message -client $client -message $jsonMessage
     $response = Receive-Message -client $client
 
-    Write-Host -ForegroundColor Green "Response received: $response"
-    
     $responseObject = ConvertFrom-Json -InputObject $response
+
+    # Cambiar el color de la salida según el valor de Status
+    switch ($responseObject.Status) {
+        0 { $color = "Green" }
+        1 { $color = "Red" }
+        2 { $color = "Yellow" }
+        default { $color = "Green" } 
+    }
+
+    Write-Host -ForegroundColor $color "Response received: $response"
+
     Write-Output $responseObject
     $client.Shutdown([System.Net.Sockets.SocketShutdown]::Both)
     $client.Close()

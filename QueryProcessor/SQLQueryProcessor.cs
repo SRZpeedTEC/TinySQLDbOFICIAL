@@ -18,6 +18,12 @@ namespace QueryProcessor
                 string DataBaseName = sentence.Substring("CREATE DATABASE".Length).Trim();               
                 return new CreateDataBase().Execute(DataBaseName);
             }
+            if (sentence.StartsWith("SET DATABASE"))
+            {
+                string SetDataBaseName = sentence.Substring("SET DATABASE".Length).Trim();
+                return new SetDataBase().Execute(SetDataBaseName);
+                
+            }
             if (sentence.StartsWith("CREATE TABLE"))
             {
                 return new CreateTable().Execute();

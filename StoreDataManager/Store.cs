@@ -26,6 +26,7 @@ namespace StoreDataManager
         private const string SystemCatalogPath = $@"{DataPath}\SystemCatalog";
         private const string SystemDatabasesFile = $@"{SystemCatalogPath}\SystemDatabases.table";
         private const string SystemTablesFile = $@"{SystemCatalogPath}\SystemTables.table";
+        private string SettedDataBasePath = string.Empty;
 
         public Store()
         {
@@ -41,15 +42,34 @@ namespace StoreDataManager
         }
 
 
-        public OperationStatus CreateDataBase(string DataBaseName)
+        public OperationStatus CreateDataBase(string CreateDataBaseName)
         {
-
             // Creates a default DB called TESTDB
-            Directory.CreateDirectory($@"{DataPath}\{DataBaseName}");
+            Directory.CreateDirectory($@"{DataPath}\{CreateDataBaseName}");
 
             Console.WriteLine("Database created successfully");            
 
             return OperationStatus.Success;
+        }
+
+
+        public OperationStatus SetDataBase(string SetDataBaseName)
+        {
+            string DataBasePath = $@"{DataPath}\{SetDataBaseName}";
+
+            if (Directory.Exists(DataBasePath))
+            {
+                Console.WriteLine($"Setted up in {SetDataBaseName} succesfully");
+                this.SettedDataBasePath = DataBasePath;
+                Console.WriteLine($"Path {DataBasePath}");
+                return OperationStatus.Success;
+
+            }
+            else
+            {
+                Console.WriteLine("Database is already created");
+                return OperationStatus.Error;
+            }
         }
 
 
@@ -59,7 +79,7 @@ namespace StoreDataManager
             Directory.CreateDirectory($@"{DataPath}\TESTDB");
 
             // Creates a default Table called ESTUDIANTES
-            var tablePath = $@"{DataPath}\TESTDB\ESTUDIANTES.Table";
+            var tablePath = $@"{SettedDataBasePath}\ESTUDIANTES.Table";
 
             using (FileStream stream = File.Open(tablePath, FileMode.OpenOrCreate))
             using (BinaryWriter writer = new (stream))
