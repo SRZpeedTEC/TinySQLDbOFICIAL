@@ -2,6 +2,7 @@
 using QueryProcessor.Exceptions;
 using QueryProcessor.Operations;
 using StoreDataManager;
+using QueryProcessor.Parser;
 
 namespace QueryProcessor
 {
@@ -26,7 +27,13 @@ namespace QueryProcessor
             }
             if (sentence.StartsWith("CREATE TABLE"))
             {
-                return new CreateTable().Execute();
+                string TableInfo = sentence.Substring("CREATE TABLE".Length).Trim();
+                string TableName = new ParserTable().GetTableName(TableInfo);
+                string TableColumnsInfo = TableInfo.Substring(TableName.Length).Trim();
+                List<Column> TableColumns = new ParserTable().GetColumns(TableColumnsInfo);
+
+                return new CreateTable().Execute(TableName, TableColumns);  
+                
             }   
             if (sentence.StartsWith("SELECT"))
             {
@@ -38,6 +45,8 @@ namespace QueryProcessor
                 throw new UnknownSQLSentenceException();
             }
         }
+
+       
     }
     
 } 

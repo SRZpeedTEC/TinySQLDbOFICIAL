@@ -1,4 +1,6 @@
 ﻿using Entities;
+using QueryProcessor;
+using QueryProcessor.Parser;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 
@@ -73,29 +75,27 @@ namespace StoreDataManager
         }
 
 
-        public OperationStatus CreateTable()
-        {
-            // Creates a default DB called TESTDB
-            Directory.CreateDirectory($@"{DataPath}\TESTDB");
+        public OperationStatus CreateTable(string TableName, List<Column> TableColumns)
+        {           
 
             // Creates a default Table called ESTUDIANTES
-            var tablePath = $@"{SettedDataBasePath}\ESTUDIANTES.Table";
+            var tablePath = $@"{SettedDataBasePath}\{TableName}";
 
-            using (FileStream stream = File.Open(tablePath, FileMode.OpenOrCreate))
+            using (FileStream stream = File.Open(tablePath, FileMode.OpenOrCreate))               
             using (BinaryWriter writer = new (stream))
             {
-                // Create an object with a hardcoded.
-                // First field is an int, second field is a string of size 30,
-                // third is a string of 50
-                int id = 1;
-                string nombre = "Isaac".PadRight(30); // Pad to make the size of the string fixed
-                string apellido = "Ramirez".PadRight(50);
 
-                writer.Write(id);
-                writer.Write(nombre);
-                writer.Write(apellido);
+                foreach (Column column in TableColumns)
+                {
+                                      
+                    writer.Write(column.Name);
+                    writer.Write(column.DataType.ToString());
+                    writer.Write(column.MaxSize.HasValue ? column.MaxSize.Value : 0);
+                }
+                
             }
-            return OperationStatus.Success;
+                
+                return OperationStatus.Success;
         }
 
         public OperationStatus Select()
