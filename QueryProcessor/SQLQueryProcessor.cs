@@ -34,8 +34,18 @@ namespace QueryProcessor
 
                 return new CreateTable().Execute(TableName, TableColumns);  
                 
-            }   
-            
+            }
+
+
+            if (sentence.StartsWith("DROP TABLE"))
+            {
+                string TableToDrop = sentence.Substring("DROP TABLE".Length).Trim();
+                
+                return new DropTable().Execute(TableToDrop);
+
+            }
+
+
             if (sentence.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
             {
                 // Verificar si la consulta es sobre el System Catalog
@@ -57,6 +67,18 @@ namespace QueryProcessor
                     return new Select().Execute();
                 }
             }
+
+            if (sentence.StartsWith("INSERT INTO"))
+            {
+                string TableToDrop = sentence.Substring("INSERT INTO".Length).Trim();
+
+                return new DropTable().Execute(TableToDrop);
+
+            }
+
+
+
+
 
             else
             {

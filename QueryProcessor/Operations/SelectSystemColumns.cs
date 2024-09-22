@@ -29,7 +29,6 @@ namespace QueryProcessor.Operations
                     }
                 }
             }
-
             return OperationStatus.Success;
         }
     }
