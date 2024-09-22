@@ -7,9 +7,16 @@ using System.Threading.Tasks;
 
 namespace Entities
 {
-    internal class Table
+    public class Table
     {
         public string TableName {  get; set; }
         public List<Column> Columns { get; set; }
+
+
+        public Table(string tableName, List<Column> columns)
+        {
+            TableName = tableName;
+            Columns = columns;
+        }
     }
 }

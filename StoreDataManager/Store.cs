@@ -1,6 +1,7 @@
 ﻿using Entities;
 using QueryProcessor;
 using QueryProcessor.Parser;
+using System.Text.Json;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -101,7 +102,7 @@ namespace StoreDataManager
             }
         }
 
-        public List<string> GetAllDataBasesSystemCatalog()
+        public List<string> GetAllDataBases()
         {
 
             List<string> databases = new List<string>();
@@ -125,7 +126,7 @@ namespace StoreDataManager
             return databases;
         }
 
-               
+
 
         ///////////////////////////////////////////////// FINAL FUNCIONES BASE DE DATOS ////////////////////////////////////////////////////////
 
@@ -135,46 +136,34 @@ namespace StoreDataManager
 
         public OperationStatus CreateTable(string TableName, List<Column> TableColumns)
         {
-
-            // Validacion de que haya una base de datos setteada
+            // Validación de que haya una base de datos seteada
             if (string.IsNullOrEmpty(SettedDataBasePath))
             {
                 Console.WriteLine("No se ha establecido una base de datos");
                 return OperationStatus.Error;
             }
 
-            string tablePath = $@"{SettedDataBasePath}\{TableName}";
+            string tablePath = $@"{SettedDataBasePath}\{TableName}.table";
 
             if (File.Exists(tablePath))
             {
                 Console.WriteLine($"Tabla ya existente en {SettedDataBasePath}");
+                return OperationStatus.Error; // Cambiar a error si la tabla ya existe
             }
 
-            using (FileStream stream = File.Open(tablePath, FileMode.OpenOrCreate))
-            { 
-                // Archivo creado
-            }
-            /*
-            using (BinaryWriter writer = new (stream))
+            using (FileStream stream = File.Open(tablePath, FileMode.Create))           
             {
-
-                foreach (Column column in TableColumns)
-                {
-                                      
-                    writer.Write(column.Name);
-                    writer.Write(column.DataType.ToString());
-                    writer.Write(column.MaxSize.HasValue ? column.MaxSize.Value : 0);
-                }
-                
+                // ARCHIVO CREADO
             }
-            */
-                
+
+            // Agregar la tabla a los metadatos del sistema
             AddTableToSystemTables(TableName);
             AddColumsToSystemColumns(TableName, TableColumns);
 
             Console.WriteLine($"Tabla '{TableName}' creada exitosamente en la base de datos '{SettedDataBaseName}'.");
             return OperationStatus.Success;
         }
+
 
         private void AddTableToSystemTables(string TableName)
         {
@@ -190,9 +179,8 @@ namespace StoreDataManager
             }
         }
 
-        
 
-        public List<string> GetTablesInDataBaseSystemCatalog(string databaseName)
+        public List<string> GetTablesInDataBase(string databaseName)
         {
             List<string> tables = new List<string>();
             
@@ -263,6 +251,9 @@ namespace StoreDataManager
             return OperationStatus.Success;
         }
 
+
+
+
         private void RemoveTableFromSystemTables(string TableToDrop)
         {
             string tempPath = $@"{SystemCatalogPath}\SystemTables_Temp.table";
@@ -311,7 +302,7 @@ namespace StoreDataManager
             }
         }
 
-        public List<Column> GetColumnsOfTableSystemCatalog(string databaseName, string tableName)
+        public List<Column> GetColumnsOfTable(string databaseName, string tableName)
         {
 
             List<Column> columns = new List<Column>();
@@ -384,23 +375,330 @@ namespace StoreDataManager
         }
 
 
+        public OperationStatus InsertInto(string tableName, List<string> values)
+        {
+
+            if (string.IsNullOrEmpty(SettedDataBaseName))
+            {
+                Console.WriteLine("No se ha establecido una base de datos.");
+                return OperationStatus.Error;
+            }
+
+            // Verificar que la tabla existe
+            List<string> tables = GetTablesInDataBase(SettedDataBaseName);
+            if (!tables.Contains(tableName))
+            {
+                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
+                return OperationStatus.Error;
+            }
+
+            // Obtener las columnas de la tabla
+            List<Column> columns = GetColumnsOfTable(SettedDataBaseName, tableName);
+
+            if (values.Count != columns.Count)
+            {
+                Console.WriteLine("El número de valores proporcionados no coincide con el número de columnas.");
+                return OperationStatus.Error;
+            }
+
+            // Validar y convertir los valores
+            var convertedValues = new List<object>();
+            for (int i = 0; i < values.Count; i++)
+            {
+                string valueStr = values[i];
+                Column column = columns[i];
+                object convertedValue;
+
+                try
+                {
+                    convertedValue = ConvertValue(valueStr, column.DataType, column.MaxSize);
+                    convertedValues.Add(convertedValue);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al convertir el valor '{valueStr}' para la columna '{column.Name}': {ex.Message}");
+                    return OperationStatus.Error;
+                }
+            }
+
+            // Insertar los valores en el archivo de la tabla
+            string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
+
+            using (FileStream fs = new FileStream(tablePath, FileMode.Append, FileAccess.Write))
+            using (BinaryWriter writer = new BinaryWriter(fs))
+            {
+                foreach (var value in convertedValues)
+                {
+                    WriteValue(writer, value);
+                }
+            }
+
+            Console.WriteLine("Valores insertados correctamente.");
+            return OperationStatus.Success;
+
+        }
+
+
+        ///////////////////////////////////////////////// FUNCIONES AUXILIARES DEL INSERT INTO ///////////////////////////////////////////////////////
+
+
+        private object ConvertValue(string valueStr, DataType dataType, int? maxSize)
+        {
+            switch (dataType)
+            {
+                case DataType.INTEGER:
+                    if (int.TryParse(valueStr, out int intValue))
+                    {
+                        return intValue;
+                    }
+                    else
+                    {
+                        throw new Exception("El valor no es un entero válido.");
+                    }
+                case DataType.DOUBLE:
+                    if (double.TryParse(valueStr, out double doubleValue))
+                    {
+                        return doubleValue;
+                    }
+                    else
+                    {
+                        throw new Exception("El valor no es un double válido.");
+                    }
+                case DataType.VARCHAR:
+                    valueStr = valueStr.Trim('\'', '\"'); // Remover comillas si las hay
+                    if (valueStr.Length > maxSize)
+                    {
+                        throw new Exception($"El valor excede el tamaño máximo de {maxSize} caracteres.");
+                    }
+                    return valueStr;
+                case DataType.DATETIME:
+                    valueStr = valueStr.Trim('\'', '\"'); // Remover comillas si las hay
+                    if (DateTime.TryParse(valueStr, out DateTime dateTimeValue))
+                    {
+                        return dateTimeValue;
+                    }
+                    else
+                    {
+                        throw new Exception("El valor no es una fecha válida.");
+                    }
+                default:
+                    throw new Exception("Tipo de dato no soportado.");
+            }
+        }
+
+
+        private void WriteValue(BinaryWriter writer, object value)
+        {
+            if (value is int intValue)
+            {
+                writer.Write(intValue);
+            }
+            else if (value is double doubleValue)
+            {
+                writer.Write(doubleValue);
+            }
+            else if (value is string strValue)
+            {
+                writer.Write(strValue);
+            }
+            else if (value is DateTime dateTimeValue)
+            {
+                writer.Write(dateTimeValue.ToBinary()); // Almacenar como ticks
+            }
+            else
+            {
+                throw new Exception("Tipo de dato no soportado para escritura.");
+            }
+        }
+
+
 
         ///////////////////////////////////////////////// FINAL FUNCIONES TABLAS ///////////////////////////////////////////////////////
 
 
-        public OperationStatus Select()
+        //////////////////////////////////////////////// INICIO FUNCIONES SELECT ///////////////////////////////////////////////////////
+
+        public OperationStatus SelectFromTable(string tableName, List<string> columnsToSelect)
         {
-            // Creates a default Table called ESTUDIANTES
-            var tablePath = $@"{DataPath}\TESTDB\ESTUDIANTES.Table";
-            using (FileStream stream = File.Open(tablePath, FileMode.OpenOrCreate))
-            using (BinaryReader reader = new (stream))
+            // Verificar que la base de datos está establecida
+            if (string.IsNullOrEmpty(SettedDataBaseName))
             {
-                // Print the values as a I know exactly the types, but this needs to be done right
-                Console.WriteLine(reader.ReadInt32());
-                Console.WriteLine(reader.ReadString());
-                Console.WriteLine(reader.ReadString());
-                return OperationStatus.Success;
+                Console.WriteLine("No se ha establecido una base de datos.");
+                return OperationStatus.Error;
+            }
+
+            // Verificar que la tabla existe
+            List<string> tables = GetTablesInDataBase(SettedDataBaseName);
+            if (!tables.Contains(tableName))
+            {
+                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
+                return OperationStatus.Error;
+            }
+
+            // Obtener las columnas de la tabla
+            List<Column> allColumns = GetColumnsOfTable(SettedDataBaseName, tableName);
+
+            // Determinar las columnas a seleccionar
+            List<Column> selectedColumns;
+            if (columnsToSelect == null)
+            {
+                // Seleccionar todas las columnas
+                selectedColumns = allColumns;
+            }
+            else
+            {
+                // Validar que las columnas existen
+                selectedColumns = new List<Column>();
+                foreach (var colName in columnsToSelect)
+                {
+                    var col = allColumns.FirstOrDefault(c => c.Name.Equals(colName, StringComparison.OrdinalIgnoreCase));
+                    if (col == null)
+                    {
+                        Console.WriteLine($"La columna '{colName}' no existe en la tabla '{tableName}'.");
+                        return OperationStatus.Error;
+                    }
+                    selectedColumns.Add(col);
+                }
+            }
+
+            // Leer los registros de la tabla
+            string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
+
+            if (!File.Exists(tablePath))
+            {
+                Console.WriteLine($"El archivo de la tabla '{tableName}' no existe.");
+                return OperationStatus.Error;
+            }
+
+            var records = new List<Dictionary<string, object>>();
+
+            using (FileStream fs = new FileStream(tablePath, FileMode.Open, FileAccess.Read))
+            using (BinaryReader reader = new BinaryReader(fs))
+            {
+                while (fs.Position < fs.Length)
+                {
+                    var record = new Dictionary<string, object>();
+                    foreach (var column in allColumns)
+                    {
+                        object value = ReadValue(reader, column.DataType);
+                        record[column.Name] = value;
+                    }
+                    records.Add(record);
+                }
+            }
+
+            // Mostrar los registros en formato de tabla
+            PrintRecords(selectedColumns, records);
+
+            return OperationStatus.Success;
+        }
+
+
+
+
+
+        ///////////////////////////////////////////////// FUNCIONES AUXILIARES DEL SELECT ///////////////////////////////////////////////////////
+
+
+        private object ReadValue(BinaryReader reader, DataType dataType)
+        {
+            switch (dataType)
+            {
+                case DataType.INTEGER:
+                    return reader.ReadInt32();
+                case DataType.DOUBLE:
+                    return reader.ReadDouble();
+                case DataType.VARCHAR:
+                    return reader.ReadString();
+                case DataType.DATETIME:
+                    long ticks = reader.ReadInt64();
+                    return DateTime.FromBinary(ticks);
+                default:
+                    throw new Exception("Tipo de dato no soportado para lectura.");
             }
         }
+
+
+        private void PrintRecords(List<Column> selectedColumns, List<Dictionary<string, object>> records)
+        {
+            // Crear la tabla en forma de lista de diccionarios
+            var table = new List<Dictionary<string, object>>();
+
+            foreach (var record in records)
+            {
+                var row = new Dictionary<string, object>();
+                foreach (var column in selectedColumns)
+                {
+                    row[column.Name] = record[column.Name];
+                }
+                table.Add(row);
+            }
+
+            // Obtener los nombres de las columnas
+            var columnNames = selectedColumns.Select(c => c.Name).ToList();
+
+            // Llamar al método PrintTable
+            PrintTable(table, columnNames);
+        }
+
+
+
+        private void PrintTable(List<Dictionary<string, object>> table, List<string> columns)
+        {
+            // Calcular el ancho máximo de cada columna
+            Dictionary<string, int> columnWidths = new Dictionary<string, int>();
+
+            // Inicializar los anchos con la longitud de los nombres de las columnas
+            foreach (var col in columns)
+            {
+                columnWidths[col] = col.Length;
+            }
+
+            // Actualizar los anchos según los datos
+            foreach (var row in table)
+            {
+                foreach (var col in columns)
+                {
+                    string valueStr = row[col]?.ToString() ?? "NULL";
+                    if (valueStr.Length > columnWidths[col])
+                    {
+                        columnWidths[col] = valueStr.Length;
+                    }
+                }
+            }
+
+            // Imprimir los encabezados con formato
+            foreach (var col in columns)
+            {
+                Console.Write($"| {col.PadRight(columnWidths[col])} ");
+            }
+            Console.WriteLine("|");
+
+            // Imprimir línea separadora
+            Console.WriteLine(new string('-', columns.Sum(col => columnWidths[col] + 3) + 1));
+
+            // Paso 3: Imprimir las filas con formato
+            foreach (var row in table)
+            {
+                foreach (var col in columns)
+                {
+                    string valueStr = row[col]?.ToString() ?? "NULL";
+                    Console.Write($"| {valueStr.PadRight(columnWidths[col])} ");
+                }
+                Console.WriteLine("|");
+            }
+        }
+
+
+
+
+        public OperationStatus Select()
+        {
+            
+               return OperationStatus.Success;
+            
+        }
     }
+
+
 }

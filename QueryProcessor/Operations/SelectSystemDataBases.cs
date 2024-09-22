@@ -13,7 +13,7 @@ namespace QueryProcessor.Operations
         public OperationStatus Execute()
         {
             Store store = Store.GetInstance();
-            List<string> databases = store.GetAllDataBasesSystemCatalog();
+            List<string> databases = store.GetAllDataBases();
 
             // Mostrar los resultados
             Console.WriteLine("Databases:");

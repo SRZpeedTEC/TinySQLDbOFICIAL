@@ -14,15 +14,15 @@ namespace QueryProcessor.Operations
         public OperationStatus Execute()
         {
             var store = Store.GetInstance();
-            List<string> databases = store.GetAllDataBasesSystemCatalog();
+            List<string> databases = store.GetAllDataBases();
 
             Console.WriteLine("Columns:");
             foreach (var db in databases)
             {
-                List<string> tables = store.GetTablesInDataBaseSystemCatalog(db);
+                List<string> tables = store.GetTablesInDataBase(db);
                 foreach (var table in tables)
                 {
-                    List<Column> columns = store.GetColumnsOfTableSystemCatalog(db, table);
+                    List<Column> columns = store.GetColumnsOfTable(db, table);
                     foreach (var column in columns)
                     {
                         Console.WriteLine($"Database: {db}, Table: {table}, Column: {column.Name}, Type: {column.DataType}, Size: {column.MaxSize}");

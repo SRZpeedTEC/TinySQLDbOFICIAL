@@ -76,6 +76,3 @@ function Send-SQLCommand {
     $client.Close()
 }
 
-# This is an example, should not be called here
-#Send-SQLCommand -command "CREATE DATABASE BASEDEPRUEBA"
-#Send-SQlCommand -command "SELECT * FROM ESTUDIANTE"

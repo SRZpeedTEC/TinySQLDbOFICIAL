@@ -13,12 +13,12 @@ namespace QueryProcessor.Operations
         public OperationStatus Execute()
         {
             var store = Store.GetInstance();
-            List<string> databases = store.GetAllDataBasesSystemCatalog();
+            List<string> databases = store.GetAllDataBases();
 
             Console.WriteLine("Tables:");
             foreach (var db in databases)
             {
-                List<string> tables = store.GetTablesInDataBaseSystemCatalog(db);
+                List<string> tables = store.GetTablesInDataBase(db);
                 foreach (var table in tables)
                 {
                     Console.WriteLine($"Database: {db}, Table: {table}");

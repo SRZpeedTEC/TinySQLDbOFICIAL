@@ -4,16 +4,46 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace QueryProcessor.Operations
 {
     internal class Select
     {
-        public OperationStatus Execute()
+        public OperationStatus Execute(string sentence)
         {
-            // This is only doing the query but not returning results.
-            return Store.GetInstance().Select();
+            // Mostrar la sentencia para depuración
+            Console.WriteLine($"Select.Execute - Sentencia recibida: {sentence}");
+
+            var store = Store.GetInstance();
+
+            // Parsear la sentencia
+            var match = Regex.Match(sentence, @"SELECT\s+(\*|\w+(?:\s*,\s*\w+)*)\s+FROM\s+(\w+);?", RegexOptions.IgnoreCase);
+
+            if (!match.Success)
+            {
+                Console.WriteLine("Sintaxis de SELECT incorrecta.");
+                return OperationStatus.Error;
+            }
+
+            string columnsPart = match.Groups[1].Value;
+            string tableName = match.Groups[2].Value;
+
+            // Obtener las columnas a seleccionar
+            List<string> columnsToSelect;
+            if (columnsPart.Trim() == "*")
+            {
+                // Seleccionar todas las columnas
+                columnsToSelect = null; // Null indica todas las columnas
+            }
+            else
+            {
+                // Separar los nombres de las columnas
+                columnsToSelect = columnsPart.Split(',').Select(c => c.Trim()).ToList();
+            }
+
+            return store.SelectFromTable(tableName, columnsToSelect);
         }
     }
 }

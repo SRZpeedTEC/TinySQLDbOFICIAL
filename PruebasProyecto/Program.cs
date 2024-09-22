@@ -9,8 +9,10 @@ using Entities;
 
 namespace TinySQLDb
 {
+    
     using QueryProcessor.Parser;
     using System;
+    using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Text.RegularExpressions;
 
@@ -19,94 +21,85 @@ namespace TinySQLDb
         public static void Main()
         {
 
-            string ColumnsInfo = " (ID INTEGER,Nombre VARCHAR(30),PrimerApellido VARCHAR(30),SegundoApellido VARCHAR(30),FechaNacimiento DATETIME)";
 
-            static void GetColumns(string ColumnsInfo)
+
+            string Info = "INSERT INTO Estudiantes (1, 'Juan', 'Perez', '1990-01-01 01:02:00')";
+
+            static void Parser(string sentence)
             {
-                List<Column> Columns = new List<Column>(); // Creamos una lista de columnas
 
-                ColumnsInfo = ColumnsInfo.Trim();
-                ColumnsInfo = ColumnsInfo.Substring(1, ColumnsInfo.Length - 2);
+                // Parsear la sentencia
+                var match = Regex.Match(sentence, @"INSERT INTO\s+(\w+)\s*\((.+)\);?", RegexOptions.IgnoreCase);
 
-
-                string[] RawColumns = ColumnsInfo.Split(',');  // ("ID", "INTEGER")
-                List<string[]> RawColumnsMatrix = new List<string[]>();
-
-                foreach (string Column in RawColumns)
+                if (!match.Success)
                 {
-                    string trimmedColumn = Column.Trim();
-                    Match match = Regex.Match(trimmedColumn, @"^(\S+)\s+(.+)$"); // Formato para la division de nombre y tipo
-
-                    if (match.Success)
-                    {
-                        string columnName = match.Groups[1].Value.Trim();
-                        string columnType = match.Groups[2].Value.Trim();
-
-                        RawColumnsMatrix.Add(new string[] { columnName, columnType }); // ("ID", "INTEGER"), ("Nombre", "Santiago")
-                    }
-                    else
-                    {
-                        Console.WriteLine("FORMATO INVALIDO");
-                    }
-                }
-
-                foreach (string[] Column in RawColumnsMatrix) // ("ID", "INTEGER")
-                {
-                    Column NewColumn = new Column();
-                    NewColumn.Name = Column[0];
-                    NewColumn.DataType = DataType.DATETIME;
-
-                    NewColumn.Name = Column[0];
-
-                    string RawColumnDataType = Column[1];
-
-                    if (RawColumnDataType.StartsWith("INTEGER"))
-                    {
-                        NewColumn.DataType = DataType.INTEGER;
-                    }
-                    if (RawColumnDataType.StartsWith("VARCHAR"))
-                    {
-                        string VarcharSize = RawColumnDataType.Substring("VARCHAR".Length).Trim();
-                        string SizeStringNumbre = VarcharSize.Trim('(', ')');
-                        int MaxSizeNumber = int.Parse(SizeStringNumbre);
-
-                        NewColumn.DataType = DataType.VARCHAR;
-                        NewColumn.MaxSize = MaxSizeNumber;
-                    }
-
-                    if (RawColumnDataType.StartsWith("DOUBLE"))
-                    {
-                        NewColumn.DataType = DataType.DOUBLE;
-                    }
-
-                    if (RawColumnDataType.StartsWith("DATETIME"))
-                    {
-                        NewColumn.DataType = DataType.DATETIME;
-                    }
-
-                    Columns.Add(NewColumn);
+                    Console.WriteLine("Sintaxis de INSERT INTO incorrecta.");
 
                 }
 
+                string tableName = match.Groups[1].Value;
+                string valuesPart = match.Groups[2].Value;
 
-                foreach (Column column in Columns)
+                // Separar los valores
+                var values = ParseValues(valuesPart);
+
+                Console.WriteLine(tableName);
+                foreach (var value in values)
                 {
-
-                    Console.WriteLine(column.Name);
-                    Console.WriteLine(column.DataType);
-                    if (column.MaxSize != null)
-                    {
-                        Console.WriteLine(column.MaxSize);
-                    }
-
-
+                    Console.WriteLine(value);
                 }
-
 
             }
+          
 
-            GetColumns(ColumnsInfo);
+            static List<string> ParseValues(string valuesPart)
+            {
+                // Separar los valores por comas, teniendo en cuenta comillas y espacios
+                var values = new List<string>();
+                var current = new StringBuilder();
+                bool inQuotes = false;
+                char quoteChar = '\0';
+
+                for (int i = 0; i < valuesPart.Length; i++)
+                {
+                    char c = valuesPart[i];
+
+                    if ((c == '\'' || c == '\"') && !inQuotes)
+                    {
+                        inQuotes = true;
+                        quoteChar = c;
+                    }
+                    else if (c == quoteChar && inQuotes)
+                    {
+                        inQuotes = false;
+                    }
+                    else if (c == ',' && !inQuotes)
+                    {
+                        values.Add(current.ToString().Trim());
+                        current.Clear();
+                        continue;
+                    }
+
+                    current.Append(c);
+                }
+
+                if (current.Length > 0)
+                {
+                    values.Add(current.ToString().Trim());
+                }
+
+                return values;
+            }
+
+            Parser(Info);
+
         }
+        
     }
 
+
+
+
 }
+
+

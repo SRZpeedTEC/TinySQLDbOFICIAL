@@ -61,19 +61,18 @@ namespace QueryProcessor
                 {
                     return new SelectSystemColumns().Execute();
                 }
-                else
+                else 
                 {
                     // Implementar el SELECT normal sobre tablas de usuario
-                    return new Select().Execute();
+                    return new Select().Execute(sentence);
                 }
             }
 
             if (sentence.StartsWith("INSERT INTO"))
             {
-                string TableToDrop = sentence.Substring("INSERT INTO".Length).Trim();
-
-                return new DropTable().Execute(TableToDrop);
-
+                
+                return new ParserInsert().Parser(sentence);
+              
             }
 
 
