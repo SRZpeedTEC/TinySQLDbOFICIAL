@@ -12,18 +12,20 @@ namespace ApiInterface.Processors
         public Response Process()
         {
             var sentence = this.Request.RequestBody;
-            var result = SQLQueryProcessor.Execute(sentence);
-            var response = this.ConvertToResponse(result);
+            var result = SQLQueryProcessor.Execute(sentence, out object? data);
+            var response = this.ConvertToResponse(result, data);
             return response;
         }
 
-        private Response ConvertToResponse(OperationStatus result)
+        private Response ConvertToResponse(OperationStatus result, object? data)
         {
             return new Response
             {
                 Status = result,
                 Request = this.Request,
-                ResponseBody = "Comando Ejecutado" // Aqui se envia la informacion de la respuesta
+                ResponseBody = "Comando Ejecutado", // Aqui se envia la informacion de la respuesta
+                ResponseData = data
+
             };
         }
     }

@@ -8,11 +8,12 @@ namespace QueryProcessor
 {
     public class SQLQueryProcessor
     {
-        public static OperationStatus Execute(string sentence)
+        public static OperationStatus Execute(string sentence, out object? data)
         {
             /// The following is example code. Parser should be called
             /// on the sentence to understand and process what is requested
             
+            data = null;
 
             if (sentence.StartsWith("CREATE DATABASE"))
             {
@@ -32,10 +33,8 @@ namespace QueryProcessor
                 string TableColumnsInfo = TableInfo.Substring(TableName.Length).Trim();
                 List<Column> TableColumns = new ParserTable().GetColumns(TableColumnsInfo);
 
-                return new CreateTable().Execute(TableName, TableColumns);  
-                
+                return new CreateTable().Execute(TableName, TableColumns);                 
             }
-
 
             if (sentence.StartsWith("DROP TABLE"))
             {
@@ -43,6 +42,11 @@ namespace QueryProcessor
                 
                 return new DropTable().Execute(TableToDrop);
 
+            }
+
+            if (sentence.StartsWith("CREATE INDEX", StringComparison.OrdinalIgnoreCase))
+            {
+                return new CreateIndex().Execute(sentence);
             }
 
 
@@ -64,7 +68,7 @@ namespace QueryProcessor
                 else 
                 {
                     // Implementar el SELECT normal sobre tablas de usuario
-                    return new Select().Execute(sentence);
+                    return new Select().Execute(sentence, out data);
                 }
             }
 

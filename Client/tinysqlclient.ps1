@@ -33,13 +33,15 @@ function Receive-Message {
     $stream = New-Object System.Net.Sockets.NetworkStream($client)
     $reader = New-Object System.IO.StreamReader($stream)
     try {
-        return $null -ne $reader.ReadLine ? $reader.ReadLine() : ""
+        $line = $reader.ReadLine()
+        return $line -ne $null ? $line : ""
     }
     finally {
         $reader.Close()
         $stream.Close()
     }
 }
+
 function Send-SQLCommand {
     param (
         [string]$command
@@ -59,20 +61,56 @@ function Send-SQLCommand {
     Send-Message -client $client -message $jsonMessage
     $response = Receive-Message -client $client
 
+    if ([string]::IsNullOrEmpty($response)) {
+        Write-Host -ForegroundColor Red "No response received from the server."
+        return
+    }
+
     $responseObject = ConvertFrom-Json -InputObject $response
 
     # Cambiar el color de la salida según el valor de Status
-    switch ($responseObject.Status) {
+    switch ($responseObject.status) {
         0 { $color = "Green" }
         1 { $color = "Red" }
         2 { $color = "Yellow" }
         default { $color = "Green" } 
     }
 
-    Write-Host -ForegroundColor $color "Response received: $response"
+    # Mostrar un mensaje breve de respuesta
+    Write-Host -ForegroundColor $color "Response received with status: $($responseObject.status)"
 
-    Write-Output $responseObject
+    # Si hay datos en la respuesta, procesarlos
+    if ($responseObject.responseData -ne $null) {
+        $columns = $responseObject.responseData.columns
+        $rows = $responseObject.responseData.rows
+
+        # Convertir las filas a objetos de PowerShell
+        $data = foreach ($row in $rows) {
+            $obj = New-Object PSObject
+            foreach ($column in $columns) {
+                $value = $row.$column
+
+                # Convertir fechas de cadena a objetos DateTime
+                if ($value -is [string] -and $value -match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}') {
+                    $value = [DateTime]$value
+                }
+
+                # Convertir números a cadenas para alinear a la izquierda
+                if ($value -is [int] -or $value -is [double]) {
+                    $value = $value.ToString()
+                }
+
+                $obj | Add-Member -MemberType NoteProperty -Name $column -Value $value
+            }
+            $obj
+        }
+
+        # Mostrar los datos en formato de tabla
+        $data | Format-Table -AutoSize
+    } else {
+        Write-Host -ForegroundColor $color $responseObject.responseBody
+    }
+
     $client.Shutdown([System.Net.Sockets.SocketShutdown]::Both)
     $client.Close()
 }
-

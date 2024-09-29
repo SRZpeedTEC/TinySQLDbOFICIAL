@@ -16,7 +16,6 @@ namespace QueryProcessor.Parser
 
         
     {
-
         public OperationStatus Parser(string sentence)
         {
             

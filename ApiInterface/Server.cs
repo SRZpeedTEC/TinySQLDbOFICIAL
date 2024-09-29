@@ -68,7 +68,14 @@ namespace ApiInterface
             using (NetworkStream stream = new NetworkStream(handler))
             using (StreamWriter writer = new StreamWriter(stream))
             {
-                writer.WriteLine(JsonSerializer.Serialize(response));
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+
+                string jsonResponse = JsonSerializer.Serialize(response, options);
+                writer.WriteLine(jsonResponse);
             }
         }
 

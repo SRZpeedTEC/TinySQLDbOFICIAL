@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace StoreDataManager
 {
@@ -515,11 +516,36 @@ namespace StoreDataManager
 
         ///////////////////////////////////////////////// FINAL FUNCIONES TABLAS ///////////////////////////////////////////////////////
 
+        ///////////////////////////////////////////////// INICIO FUNCIONES INDICES ///////////////////////////////////////////////////////
+
+
+        public void CreateIndex(string hola, string chavales, string como, string andamos) { }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ///////////////////////////////////////////////// FINAL FUNCIONES INDICES ///////////////////////////////////////////////////////
 
         //////////////////////////////////////////////// INICIO FUNCIONES SELECT ///////////////////////////////////////////////////////
 
-        public OperationStatus SelectFromTable(string tableName, List<string> columnsToSelect)
+        public OperationStatus SelectFromTable(string tableName, List<string> columnsToSelect, string whereClause, string orderByColumn, string orderByDirection, out object? data)
+           
         {
+
+            data = null;
             // Verificar que la base de datos está establecida
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
@@ -587,6 +613,73 @@ namespace StoreDataManager
                 }
             }
 
+            if (!string.IsNullOrEmpty(whereClause))
+            {
+                // Parsear y evaluar la cláusula WHERE
+                string whereColumn = null;
+                string whereOperator = null;
+                string whereValue = null;
+
+                var whereMatch = Regex.Match(whereClause, @"(\w+)\s*(=|>|<|LIKE|NOT)\s*(.+)", RegexOptions.IgnoreCase);
+                if (!whereMatch.Success)
+                {
+                    Console.WriteLine("Sintaxis de WHERE incorrecta.");
+                    return OperationStatus.Error;
+                }
+
+                whereColumn = whereMatch.Groups[1].Value;
+                whereOperator = whereMatch.Groups[2].Value.ToUpper();
+                whereValue = whereMatch.Groups[3].Value.Trim('\'', '\"');
+
+                // Validar la columna
+                var whereCol = allColumns.FirstOrDefault(c => c.Name.Equals(whereColumn, StringComparison.OrdinalIgnoreCase));
+                if (whereCol == null)
+                {
+                    Console.WriteLine($"La columna '{whereColumn}' no existe en la tabla '{tableName}'.");
+                    return OperationStatus.Error;
+                }
+
+                // Aplicar el filtro
+                records = records.Where(record => EvaluateWhereCondition(record, whereColumn, whereOperator, whereValue)).ToList();
+            }
+
+            // Ordenar los registros si hay cláusula ORDER BY
+            if (!string.IsNullOrEmpty(orderByColumn))
+            {
+                var orderByCol = allColumns.FirstOrDefault(c => c.Name.Equals(orderByColumn, StringComparison.OrdinalIgnoreCase));
+                if (orderByCol == null)
+                {
+                    Console.WriteLine($"La columna '{orderByColumn}' no existe en la tabla '{tableName}'.");
+                    return OperationStatus.Error;
+                }
+
+                if (orderByDirection.Equals("DESC", StringComparison.OrdinalIgnoreCase))
+                {
+                    records = records.OrderByDescending(r => r[orderByCol.Name]).ToList();
+                }
+                else
+                {
+                    records = records.OrderBy(r => r[orderByCol.Name]).ToList();
+                }
+            }
+
+            var filteredRecords = records.Select(record =>
+            {
+                var filteredRecord = new Dictionary<string, object>();
+                foreach (var column in selectedColumns)
+                {
+                    filteredRecord[column.Name] = record[column.Name];
+                }
+                return filteredRecord;
+            }).ToList();
+
+            // Asignar los datos al parámetro de salida
+            data = new
+            {
+                Columns = selectedColumns.Select(c => c.Name).ToList(),
+                Rows = filteredRecords
+            };
+
             // Mostrar los registros en formato de tabla
             PrintRecords(selectedColumns, records);
 
@@ -617,6 +710,8 @@ namespace StoreDataManager
                     throw new Exception("Tipo de dato no soportado para lectura.");
             }
         }
+
+      
 
 
         private void PrintRecords(List<Column> selectedColumns, List<Dictionary<string, object>> records)
@@ -688,6 +783,56 @@ namespace StoreDataManager
                 Console.WriteLine("|");
             }
         }
+
+        private bool EvaluateWhereCondition(Dictionary<string, object> record, string columnName, string operatorStr, string valueStr)
+        {
+            if (!record.ContainsKey(columnName))
+                return false;
+
+            var recordValue = record[columnName];
+
+            switch (operatorStr)
+            {
+                case "=":
+                    return recordValue.ToString().Equals(valueStr, StringComparison.OrdinalIgnoreCase);
+                case ">":
+                    return CompareValues(recordValue, valueStr) > 0;
+                case "<":
+                    return CompareValues(recordValue, valueStr) < 0;
+                case "LIKE":
+                    return recordValue.ToString().Contains(valueStr, StringComparison.OrdinalIgnoreCase);
+                case "NOT":
+                    return !recordValue.ToString().Equals(valueStr, StringComparison.OrdinalIgnoreCase);
+                default:
+                    throw new Exception("Operador no soportado en WHERE.");
+            }
+        }
+
+        private int CompareValues(object recordValue, string valueStr)
+        {
+            if (recordValue is int intValue && int.TryParse(valueStr, out int compareInt))
+            {
+                return intValue.CompareTo(compareInt);
+            }
+            else if (recordValue is double doubleValue && double.TryParse(valueStr, out double compareDouble))
+            {
+                return doubleValue.CompareTo(compareDouble);
+            }
+            else if (recordValue is string strValue)
+            {
+                return string.Compare(strValue, valueStr, StringComparison.OrdinalIgnoreCase);
+            }
+            else if (recordValue is DateTime dateTimeValue && DateTime.TryParse(valueStr, out DateTime compareDateTime))
+            {
+                return dateTimeValue.CompareTo(compareDateTime);
+            }
+            else
+            {
+                throw new Exception("Tipos de datos no comparables.");
+            }
+        }
+
+
 
 
 
