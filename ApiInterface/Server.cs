@@ -16,10 +16,16 @@ namespace ApiInterface
 
         public static async Task Start()
         {
+            
+
             using Socket listener = new(serverEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             listener.Bind(serverEndPoint);
             listener.Listen(supportedParallelConnections);
             Console.WriteLine($"Server ready at {serverEndPoint.ToString()}");
+
+            var indexGenerator = new IndexGenerator();
+            indexGenerator.LoadIndexesAndGenerateTrees();
+
 
             while (true)
             {
@@ -42,6 +48,7 @@ namespace ApiInterface
                 }
             }
         }
+
 
         private static string GetMessage(Socket handler)
         {

@@ -6,7 +6,20 @@ using System.Threading.Tasks;
 
 namespace ApiInterface.Indexes
 {
-    internal class BTreeNode
+    public class BTreeNode<T> where T : IComparable<T>
     {
+        public T[] keys;  // Las claves (valores) en el nodo
+        public BTreeNode<T>[] children;  // Los hijos del nodo
+        public int numKeys;  // Número actual de claves en el nodo
+        public bool isLeaf;  // Si es una hoja o no
+
+        // Constructor
+        public BTreeNode(int t, bool isLeaf)
+        {
+            this.isLeaf = isLeaf;
+            keys = new T[2 * t - 1];  // Cada nodo puede contener hasta 2t - 1 claves
+            children = new BTreeNode<T>[2 * t];  // Cada nodo puede tener hasta 2t hijos
+            numKeys = 0;  // Inicialmente no hay claves en el nodo
+        }
     }
 }

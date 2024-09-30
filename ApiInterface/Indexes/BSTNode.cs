@@ -6,7 +6,15 @@ using System.Threading.Tasks;
 
 namespace ApiInterface.Indexes
 {
-    internal class BSTNode
+    public class TreeNode<T> where T : IComparable<T>
     {
+        public T key;
+        public TreeNode<T> left, right;
+
+        public TreeNode(T item)
+        {
+            key = item;
+            left = right = null;
+        }
     }
 }

@@ -520,22 +520,178 @@ namespace StoreDataManager
         ///////////////////////////////////////////////// INICIO FUNCIONES INDICES ///////////////////////////////////////////////////////
 
 
-        public OperationStatus CreateIndex(string hola, string chavales, string como, string andamos) 
+        // esto es basicamente un add index to system indexes
+        public OperationStatus CreateIndex(string indexName, string tableName, string columnName, string indexType) 
             {
+            // Verificar que la base de datos está establecida
+            if (string.IsNullOrEmpty(SettedDataBaseName))
+            {
+                Console.WriteLine("No se ha establecido una base de datos.");
+                return OperationStatus.Error;
+            }
+
+            // Verificar que la tabla existe
+            List<string> tables = GetTablesInDataBase(SettedDataBaseName);
+            if (!tables.Contains(tableName))
+            {
+                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
+                return OperationStatus.Error;
+            }
+
+            // Verificar que el tipo de índice sea válido (BST o BTREE)
+            if (!indexType.Equals("BST", StringComparison.OrdinalIgnoreCase) &&
+                !indexType.Equals("BTREE", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"El tipo de índice '{indexType}' no es válido. Solo se permiten 'BST' o 'BTREE'.");
+                return OperationStatus.Error;
+            }
+
+            // Obtener las columnas de la tabla
+            List<Column> allColumns = GetColumnsOfTable(SettedDataBaseName, tableName);
+
+            // Verificar si la columna especificada existe en la tabla
+            var column = allColumns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
+            if (column == null)
+            {
+                Console.WriteLine($"La columna '{columnName}' no existe en la tabla '{tableName}'.");
+                return OperationStatus.Error;
+            }
+            
+  
+            using (FileStream stream = File.Open(SystemIndexesFile, FileMode.OpenOrCreate, FileAccess.Write))
+            {
+                stream.Seek(0, SeekOrigin.End);
+
+                using (BinaryWriter writer = new(stream))
+                {
+
+                    writer.Write(SettedDataBaseName);
+                    writer.Write(tableName);
+                    writer.Write(indexName);
+                    writer.Write(columnName);
+                    writer.Write(indexType);
+
+
+                }
+            }
+
+
             return OperationStatus.Success;
             }
 
 
 
+        ///////////////////////////////////////////////// FUNCIONES AUXILIARES DE LOS INDICES  ///////////////////////////////////////////////////////
+
+        public List<object> GetColumnData(string databaseName, string tableName, string columnName)
+        {
+            var columnData = new List<object>();
+
+            // Verificar que la base de datos existe
+            if (string.IsNullOrEmpty(databaseName))
+            {
+                Console.WriteLine("El nombre de la base de datos no puede estar vacío.");
+                return columnData; // Retorna una lista vacía si no hay nombre de base de datos
+            }
+
+            // Verificar que la tabla existe en la base de datos especificada
+            List<string> tables = GetTablesInDataBase(databaseName);
+            if (!tables.Contains(tableName))
+            {
+                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{databaseName}'.");
+                return columnData; // Retorna una lista vacía si la tabla no existe
+            }
+
+            // Obtener las columnas de la tabla
+            List<Column> allColumns = GetColumnsOfTable(databaseName, tableName);
+
+            // Validar que la columna existe
+            var targetColumn = allColumns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
+            if (targetColumn == null)
+            {
+                Console.WriteLine($"La columna '{columnName}' no existe en la tabla '{tableName}'.");
+                return columnData; // Retorna una lista vacía si la columna no existe
+            }
+
+            string DataBasePath = $@"{DataPath}\{databaseName}";
+
+            if (Directory.Exists(DataBasePath))
+            {
+                Console.WriteLine($"Setted up in {databaseName} succesfully");
+                this.SettedDataBasePath = DataBasePath;
+                this.SettedDataBaseName = databaseName;
+                Console.WriteLine($"Path {DataBasePath}");
+                
+
+            }
+
+            // Leer los registros de la tabla
+            string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
+
+            if (!File.Exists(tablePath))
+            {
+                Console.WriteLine($"El archivo de la tabla '{tableName}' no existe.");
+                return columnData; // Retorna una lista vacía si el archivo no existe
+            }
+
+            using (FileStream fs = new FileStream(tablePath, FileMode.Open, FileAccess.Read))
+            using (BinaryReader reader = new BinaryReader(fs))
+            {
+                while (fs.Position < fs.Length)
+                {
+                    var record = new Dictionary<string, object>();
+                    foreach (var column in allColumns)
+                    {
+                        object value = ReadValue(reader, column.DataType);
+                        record[column.Name] = value;
+                    }
+                    // Agregar el valor de la columna deseada a la lista
+                    columnData.Add(record[targetColumn.Name]);
+                }
+            }
+
+            return columnData;
+        }
 
 
 
 
+        public DataType? GetColumnDataType(string databaseName, string tableName, string columnName)
+        {
+            // Verificar que la base de datos existe
+            if (string.IsNullOrEmpty(databaseName))
+            {
+                Console.WriteLine("El nombre de la base de datos no puede estar vacío.");
+                return null; // Retorna null si no hay nombre de base de datos
+            }
 
+            // Verificar que la tabla existe en la base de datos especificada
+            List<string> tables = GetTablesInDataBase(databaseName);
+            if (!tables.Contains(tableName))
+            {
+                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{databaseName}'.");
+                return null; // Retorna null si la tabla no existe
+            }
 
+            // Obtener las columnas de la tabla
+            List<Column> allColumns = GetColumnsOfTable(databaseName, tableName);
 
+            // Validar que la columna existe
+            var targetColumn = allColumns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
+            if (targetColumn == null)
+            {
+                Console.WriteLine($"La columna '{columnName}' no existe en la tabla '{tableName}'.");
+                return null; // Retorna null si la columna no existe
+            }
 
+            // Retorna el DataType de la columna
+            return targetColumn.DataType;
+        }
 
+        public string GetSystemIndexesFile()
+        {
+            return SystemIndexesFile;
+        }
 
 
 
