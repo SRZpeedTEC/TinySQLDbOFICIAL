@@ -32,6 +32,7 @@ namespace StoreDataManager
         private const string SystemDatabasesFile = $@"{SystemCatalogPath}\SystemDatabases.table";
         private const string SystemTablesFile = $@"{SystemCatalogPath}\SystemTables.table";
         private const string SystemColumnsFile = $@"{SystemCatalogPath}\SystemColumns.table";
+        private const string SystemIndexesFile = $@"{SystemCatalogPath}\SystemIndexes.table";
         private string SettedDataBasePath = string.Empty;
         private string SettedDataBaseName = string.Empty;
 
@@ -519,7 +520,10 @@ namespace StoreDataManager
         ///////////////////////////////////////////////// INICIO FUNCIONES INDICES ///////////////////////////////////////////////////////
 
 
-        public void CreateIndex(string hola, string chavales, string como, string andamos) { }
+        public OperationStatus CreateIndex(string hola, string chavales, string como, string andamos) 
+            {
+            return OperationStatus.Success;
+            }
 
 
 
