@@ -7,6 +7,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Text.RegularExpressions;
 
+
 namespace StoreDataManager
 {
     public sealed class Store
@@ -33,12 +34,14 @@ namespace StoreDataManager
         private const string SystemTablesFile = $@"{SystemCatalogPath}\SystemTables.table";
         private const string SystemColumnsFile = $@"{SystemCatalogPath}\SystemColumns.table";
         private const string SystemIndexesFile = $@"{SystemCatalogPath}\SystemIndexes.table";
+        public Dictionary<string, object> IndexTrees = new Dictionary<string, object>();
         private string SettedDataBasePath = string.Empty;
         private string SettedDataBaseName = string.Empty;
 
         public Store()
         {
             this.InitializeSystemCatalog();
+            
             
         }
 
@@ -617,12 +620,10 @@ namespace StoreDataManager
 
             if (Directory.Exists(DataBasePath))
             {
-                Console.WriteLine($"Setted up in {databaseName} succesfully");
+                
                 this.SettedDataBasePath = DataBasePath;
                 this.SettedDataBaseName = databaseName;
-                Console.WriteLine($"Path {DataBasePath}");
-                
-
+                               
             }
 
             // Leer los registros de la tabla
@@ -649,6 +650,9 @@ namespace StoreDataManager
                     columnData.Add(record[targetColumn.Name]);
                 }
             }
+
+            this.SettedDataBasePath = string.Empty;
+            this.SettedDataBaseName = string.Empty;
 
             return columnData;
         }
@@ -693,7 +697,43 @@ namespace StoreDataManager
             return SystemIndexesFile;
         }
 
+        public string GetIndexNameIfExist(string databaseName, string tableName, string columnName)
+        {
+            // Abrir el archivo en modo de solo lectura
+            if (!File.Exists(SystemIndexesFile))
+            {
+                // Si el archivo no existe, no puede haber ningún índice
+                return null;
+            }
 
+            using (FileStream stream = File.Open(SystemIndexesFile, FileMode.Open, FileAccess.Read))
+            {
+                using (BinaryReader reader = new(stream))
+                {
+                    while (stream.Position < stream.Length) // Leer hasta el final del archivo
+                    {
+                        // Leer los valores en el mismo orden en que fueron escritos
+                        string dbName = reader.ReadString();
+                        string tblName = reader.ReadString();
+                        string idxName = reader.ReadString();
+                        string colName = reader.ReadString();
+                        string idxType = reader.ReadString(); 
+
+                        // Comprobar si coinciden la base de datos, la tabla y la columna
+                        if (dbName.Equals(databaseName, StringComparison.OrdinalIgnoreCase) &&
+                            tblName.Equals(tableName, StringComparison.OrdinalIgnoreCase) &&
+                            colName.Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Si se encuentra una coincidencia, devolver el nombre del índice
+                            return idxName;
+                        }
+                    }
+                }
+            }
+
+            // Si no se encontró el índice, devolver null
+            return null;
+        }
 
 
 
@@ -747,79 +787,24 @@ namespace StoreDataManager
                 }
             }
 
-            // Leer los registros de la tabla
-            string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
-
-            if (!File.Exists(tablePath))
-            {
-                Console.WriteLine($"El archivo de la tabla '{tableName}' no existe.");
-                return OperationStatus.Error;
-            }
-
-            var records = new List<Dictionary<string, object>>();
-
-            using (FileStream fs = new FileStream(tablePath, FileMode.Open, FileAccess.Read))
-            using (BinaryReader reader = new BinaryReader(fs))
-            {
-                while (fs.Position < fs.Length)
-                {
-                    var record = new Dictionary<string, object>();
-                    foreach (var column in allColumns)
-                    {
-                        object value = ReadValue(reader, column.DataType);
-                        record[column.Name] = value;
-                    }
-                    records.Add(record);
-                }
-            }
-
+            var records = GetRecordsFromTable(tableName, allColumns);
+            
             if (!string.IsNullOrEmpty(whereClause))
             {
-                // Parsear y evaluar la cláusula WHERE
-                string whereColumn = null;
-                string whereOperator = null;
-                string whereValue = null;
-
-                var whereMatch = Regex.Match(whereClause, @"(\w+)\s*(=|>|<|LIKE|NOT)\s*(.+)", RegexOptions.IgnoreCase);
-                if (!whereMatch.Success)
+                records = FilteredRecordsWhere(records, whereClause, tableName, allColumns);
+                if (records == null)
                 {
-                    Console.WriteLine("Sintaxis de WHERE incorrecta.");
                     return OperationStatus.Error;
                 }
-
-                whereColumn = whereMatch.Groups[1].Value;
-                whereOperator = whereMatch.Groups[2].Value.ToUpper();
-                whereValue = whereMatch.Groups[3].Value.Trim('\'', '\"');
-
-                // Validar la columna
-                var whereCol = allColumns.FirstOrDefault(c => c.Name.Equals(whereColumn, StringComparison.OrdinalIgnoreCase));
-                if (whereCol == null)
-                {
-                    Console.WriteLine($"La columna '{whereColumn}' no existe en la tabla '{tableName}'.");
-                    return OperationStatus.Error;
-                }
-
-                // Aplicar el filtro
-                records = records.Where(record => EvaluateWhereCondition(record, whereColumn, whereOperator, whereValue)).ToList();
             }
-
+         
             // Ordenar los registros si hay cláusula ORDER BY
             if (!string.IsNullOrEmpty(orderByColumn))
             {
-                var orderByCol = allColumns.FirstOrDefault(c => c.Name.Equals(orderByColumn, StringComparison.OrdinalIgnoreCase));
-                if (orderByCol == null)
+                records = FilteredRecordsOrderBy(records, orderByColumn, orderByDirection, tableName, allColumns);
+                if (records == null)
                 {
-                    Console.WriteLine($"La columna '{orderByColumn}' no existe en la tabla '{tableName}'.");
                     return OperationStatus.Error;
-                }
-
-                if (orderByDirection.Equals("DESC", StringComparison.OrdinalIgnoreCase))
-                {
-                    records = records.OrderByDescending(r => r[orderByCol.Name]).ToList();
-                }
-                else
-                {
-                    records = records.OrderBy(r => r[orderByCol.Name]).ToList();
                 }
             }
 
@@ -851,6 +836,92 @@ namespace StoreDataManager
 
 
         ///////////////////////////////////////////////// FUNCIONES AUXILIARES DEL SELECT ///////////////////////////////////////////////////////
+
+        private List<Dictionary<string, object>> GetRecordsFromTable(string tableName, List<Column> allColumns)
+        {
+            string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
+
+            if (!File.Exists(tablePath))
+            {
+                Console.WriteLine($"El archivo de la tabla '{tableName}' no existe.");
+                return new List<Dictionary<string, object>>();
+            }
+
+            var records = new List<Dictionary<string, object>>();
+
+            using (FileStream fs = new FileStream(tablePath, FileMode.Open, FileAccess.Read))
+            using (BinaryReader reader = new BinaryReader(fs))
+            {
+                while (fs.Position < fs.Length)
+                {
+                    var record = new Dictionary<string, object>();
+                    foreach (var column in allColumns)
+                    {
+                        object value = ReadValue(reader, column.DataType);
+                        record[column.Name] = value;
+                    }
+                    records.Add(record);
+
+                    Console.WriteLine("Registro leido:");
+                    foreach (var key in record.Keys)
+                    {
+                        Console.WriteLine($"Columna: {key}, Valor: {record[key]}");
+                    }
+                }
+            }
+
+            return records;
+        }
+        private List<Dictionary<string, object>> FilteredRecordsWhere(List<Dictionary<string, object>> records, string whereClause, string tableName, List<Column> allColumns)
+        {
+            // Parsear y evaluar la cláusula WHERE
+            string whereColumn = null;
+            string whereOperator = null;
+            string whereValue = null;
+
+            var whereMatch = Regex.Match(whereClause, @"(\w+)\s*(=|>|<|LIKE|NOT)\s*(.+)", RegexOptions.IgnoreCase);
+            if (!whereMatch.Success)
+            {
+                Console.WriteLine("Sintaxis de WHERE incorrecta.");
+                return records = null;
+            }
+
+            whereColumn = whereMatch.Groups[1].Value;
+            whereOperator = whereMatch.Groups[2].Value.ToUpper();
+            whereValue = whereMatch.Groups[3].Value.Trim('\'', '\"');
+
+            // Validar la columna
+            var whereCol = allColumns.FirstOrDefault(c => c.Name.Equals(whereColumn, StringComparison.OrdinalIgnoreCase));
+            if (whereCol == null)
+            {
+                Console.WriteLine($"La columna '{whereColumn}' no existe en la tabla '{tableName}'.");
+                return records = null;
+            }
+
+            // Aplicar el filtro
+            return records = records.Where(record => EvaluateWhereCondition(record, whereColumn, whereOperator, whereValue)).ToList();
+        }
+
+        private List<Dictionary<string, object>> FilteredRecordsOrderBy(List<Dictionary<string, object>> records, string orderByColumn, string orderByDirection, string tableName, List<Column> allColumns) 
+        {
+            var orderByCol = allColumns.FirstOrDefault(c => c.Name.Equals(orderByColumn, StringComparison.OrdinalIgnoreCase));
+            if (orderByCol == null)
+            {
+                Console.WriteLine($"La columna '{orderByColumn}' no existe en la tabla '{tableName}'.");
+                return records = null;
+            }
+
+            if (orderByDirection.Equals("DESC", StringComparison.OrdinalIgnoreCase))
+            {
+                return records = records.OrderByDescending(r => r[orderByCol.Name]).ToList();
+            }
+            else
+            {
+                return records = records.OrderBy(r => r[orderByCol.Name]).ToList();
+            }
+        }
+
+
 
 
         private object ReadValue(BinaryReader reader, DataType dataType)
@@ -944,6 +1015,8 @@ namespace StoreDataManager
             }
         }
 
+        // public List<string>
+
         private bool EvaluateWhereCondition(Dictionary<string, object> record, string columnName, string operatorStr, string valueStr)
         {
             if (!record.ContainsKey(columnName))
@@ -991,7 +1064,6 @@ namespace StoreDataManager
                 throw new Exception("Tipos de datos no comparables.");
             }
         }
-
 
 
 

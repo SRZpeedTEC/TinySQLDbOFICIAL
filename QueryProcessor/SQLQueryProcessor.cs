@@ -79,7 +79,10 @@ namespace QueryProcessor
               
             }
 
-
+            if (sentence.StartsWith("UPDATE"))
+            {
+                return new Update().Execute(sentence);
+            }
 
 
 

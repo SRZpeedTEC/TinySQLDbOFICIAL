@@ -13,7 +13,7 @@ namespace ApiInterface
     public class IndexGenerator
     {
         // Diccionario en memoria para almacenar los árboles por índice.
-        Dictionary<string, object> IndexTrees = new Dictionary<string, object>();
+        
 
         public void LoadIndexesAndGenerateTrees()
         {
@@ -59,7 +59,7 @@ namespace ApiInterface
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
-                                IndexTrees[indexName] = bst;
+                                Store.GetInstance().IndexTrees[indexName] = bst;
 
                             }
 
@@ -73,7 +73,7 @@ namespace ApiInterface
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
-                                IndexTrees[indexName] = bst;
+                                Store.GetInstance().IndexTrees[indexName] = bst;
 
                             }
 
@@ -86,7 +86,7 @@ namespace ApiInterface
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
-                                IndexTrees[indexName] = bst;
+                                Store.GetInstance().IndexTrees[indexName] = bst;
 
                             }
 
@@ -99,7 +99,7 @@ namespace ApiInterface
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
-                                IndexTrees[indexName] = bst;
+                                Store.GetInstance().IndexTrees[indexName] = bst;
 
                             }
 
@@ -114,10 +114,11 @@ namespace ApiInterface
                                 foreach (int value in columnData)
                                 {
                                     bTree.Insert(value); // Insertar valores en el BTree
+                                    Console.WriteLine($"Valor {value} agregado al arbol del indice: {indexName}");
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
-                                IndexTrees[indexName] = bTree;
+                                Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
 
                             else if (columnDatatype == DataType.DOUBLE)
@@ -129,7 +130,7 @@ namespace ApiInterface
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
-                                IndexTrees[indexName] = bTree;
+                                Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
 
                             else if (columnDatatype == DataType.VARCHAR)
@@ -142,7 +143,7 @@ namespace ApiInterface
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
-                                IndexTrees[indexName] = bTree;
+                                Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
 
                             else if (columnDatatype == DataType.DATETIME)
@@ -155,7 +156,7 @@ namespace ApiInterface
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
-                                IndexTrees[indexName] = bTree;
+                                Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
 
 
