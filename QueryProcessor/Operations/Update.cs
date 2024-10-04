@@ -26,6 +26,8 @@ namespace QueryProcessor.Operations
             string newValue = match.Groups[3].Value;
             string whereClause = match.Groups[4].Value;
 
+            return store.UpdateFromTable(tableName, columnName, newValue, whereClause);
+
         }
     }
 }

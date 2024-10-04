@@ -84,6 +84,11 @@ namespace QueryProcessor
                 return new Update().Execute(sentence);
             }
 
+            if (sentence.StartsWith("DELETE"))
+            {
+                return new Delete().Execute(sentence);
+            }
+
 
 
             else

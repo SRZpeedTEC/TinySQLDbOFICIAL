@@ -746,6 +746,7 @@ namespace StoreDataManager
         {
 
             data = null;
+            string mode = "DEFAULT";
             // Verificar que la base de datos está establecida
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
@@ -788,10 +789,16 @@ namespace StoreDataManager
             }
 
             var records = GetRecordsFromTable(tableName, allColumns);
-            
+
+            if (records == null)
+            {
+                Console.WriteLine("No se pudieron leer los registros de la tabla.");
+                return OperationStatus.Error;
+            }
+
             if (!string.IsNullOrEmpty(whereClause))
             {
-                records = FilteredRecordsWhere(records, whereClause, tableName, allColumns);
+                records = FilteredRecordsWhere(records, whereClause, tableName, allColumns, mode, null, null);
                 if (records == null)
                 {
                     return OperationStatus.Error;
@@ -832,8 +839,160 @@ namespace StoreDataManager
         }
 
 
+        ///////////////////////////////////////////////// FUNCION UPDATE ///////////////////////////////////////////////////////
 
+        public OperationStatus UpdateFromTable(string tableName, string columnName, string newValue, string whereClause)
+        {
+            // Verificar que la base de datos está establecida
+            if (string.IsNullOrEmpty(SettedDataBaseName))
+            {
+                Console.WriteLine("No se ha establecido una base de datos.");
+                return OperationStatus.Error;
+            }
 
+            // Verificar que la tabla existe
+            List<string> tables = GetTablesInDataBase(SettedDataBaseName);
+            if (!tables.Contains(tableName))
+            {
+                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
+                return OperationStatus.Error;
+            }
+
+            // Obtener las columnas de la tabla
+            List<Column> allColumns = GetColumnsOfTable(SettedDataBaseName, tableName);
+            List<Dictionary<string, object>> records = GetRecordsFromTable(tableName, allColumns);                      
+            string mode = "UPDATE";
+            object convertedValue;
+
+            if (records == null)
+            {
+                Console.WriteLine("No se pudieron leer los registros de la tabla.");
+                return OperationStatus.Error;
+            }
+
+            // Validar que la columna a actualizar existe
+            var targetColumn = allColumns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
+            if (targetColumn == null)
+            {
+                Console.WriteLine($"La columna '{columnName}' no existe en la tabla '{tableName}'.");
+                return OperationStatus.Error;
+            }
+         
+            try
+            {
+                convertedValue = ConvertValue(newValue, targetColumn.DataType, targetColumn.MaxSize);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al convertir el valor '{newValue}' para la columna '{columnName}': {ex.Message}");
+                return OperationStatus.Error;
+            }
+
+            // Leer los registros de la tabla
+            string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
+
+            if (!File.Exists(tablePath))
+            {
+                Console.WriteLine($"El archivo de la tabla '{tableName}' no existe.");
+                return OperationStatus.Error;
+            }
+
+            if (!string.IsNullOrEmpty(whereClause))
+            {
+                records = FilteredRecordsWhere(records, whereClause, tableName, allColumns, mode, columnName, convertedValue);
+                if (records == null)
+                {
+                    return OperationStatus.Error;
+                }
+            }
+            else
+            {
+                foreach(var record in records)
+                {
+                    record[columnName] = convertedValue;
+                }               
+            }
+          
+            using (FileStream fs = new FileStream(tablePath, FileMode.Create, FileAccess.Write))
+            using (BinaryWriter writer = new BinaryWriter(fs))
+            {
+                foreach (var record in records)
+                {
+                    foreach (var column in allColumns)
+                    {
+                        object value = record[column.Name];
+                        WriteValue(writer, value);
+                    }
+                }
+            }
+
+            Console.WriteLine("Valores actualizados correctamente.");
+            return OperationStatus.Success;
+
+        }
+
+        ///////////////////////////////////////////////// FUNCION DELETE ///////////////////////////////////////////////////////
+        
+
+        public OperationStatus DeleteFromTable(string tableName, string whereClause)
+        {
+            // Verificar que la base de datos está establecida
+            string mode = "DEFAULT";
+
+            if (string.IsNullOrEmpty(SettedDataBaseName))
+            {
+                Console.WriteLine("No se ha establecido una base de datos.");
+                return OperationStatus.Error;
+            }
+
+            // Verificar que la tabla existe
+            List<string> tables = GetTablesInDataBase(SettedDataBaseName);
+            if (!tables.Contains(tableName))
+            {
+                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
+                return OperationStatus.Error;
+            }
+
+            // Obtener las columnas de la tabla
+            List<Column> allColumns = GetColumnsOfTable(SettedDataBaseName, tableName);
+            List<Dictionary<string, object>> records = GetRecordsFromTable(tableName, allColumns);
+            List<Dictionary<string, object>> recordsToDelete = new List<Dictionary<string, object>>();
+            if (records == null)
+            {
+                Console.WriteLine("No se pudieron leer los registros de la tabla.");
+                return OperationStatus.Error;
+            }
+
+            if (!string.IsNullOrEmpty(whereClause))
+            {
+                recordsToDelete = FilteredRecordsWhere(records, whereClause, tableName, allColumns, mode, null, null);
+                if (records == null)
+                {
+                    return OperationStatus.Error;
+                }
+            }
+
+            records = records.Except(recordsToDelete).ToList();
+
+            string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
+
+            using (FileStream fs = new FileStream(tablePath, FileMode.Create, FileAccess.Write))
+            using (BinaryWriter writer = new BinaryWriter(fs))
+            {
+                foreach (var record in records)
+                {
+                    foreach (var column in allColumns)
+                    {
+                        object value = record[column.Name];
+                        WriteValue(writer, value);
+                    }
+                }
+            }
+
+            return OperationStatus.Success;
+        }
+
+         
 
         ///////////////////////////////////////////////// FUNCIONES AUXILIARES DEL SELECT ///////////////////////////////////////////////////////
 
@@ -872,7 +1031,8 @@ namespace StoreDataManager
 
             return records;
         }
-        private List<Dictionary<string, object>> FilteredRecordsWhere(List<Dictionary<string, object>> records, string whereClause, string tableName, List<Column> allColumns)
+
+        private List<Dictionary<string, object>> FilteredRecordsWhere(List<Dictionary<string, object>> records, string whereClause, string tableName, List<Column> allColumns, string mode, string? settedColumn,  object? updateValue)
         {
             // Parsear y evaluar la cláusula WHERE
             string whereColumn = null;
@@ -899,7 +1059,31 @@ namespace StoreDataManager
             }
 
             // Aplicar el filtro
-            return records = records.Where(record => EvaluateWhereCondition(record, whereColumn, whereOperator, whereValue)).ToList();
+            if(mode == "DEFAULT") 
+            {
+                return records = records.Where(record => EvaluateWhereCondition(record, whereColumn, whereOperator, whereValue)).ToList();
+            }
+
+            else if(mode == "UPDATE")
+            {
+                
+
+                foreach (var record in records)
+                {                 
+                    if (EvaluateWhereCondition(record, whereColumn, whereOperator, whereValue))
+                    {
+                        record[settedColumn] = updateValue;
+                    }                 
+                }
+
+                return records;
+            }
+
+            else
+            {
+                return records = null;
+            }
+            
         }
 
         private List<Dictionary<string, object>> FilteredRecordsOrderBy(List<Dictionary<string, object>> records, string orderByColumn, string orderByDirection, string tableName, List<Column> allColumns) 
@@ -1069,12 +1253,7 @@ namespace StoreDataManager
 
 
 
-        public OperationStatus Select()
-        {
-            
-               return OperationStatus.Success;
-            
-        }
+        
     }
 
 
