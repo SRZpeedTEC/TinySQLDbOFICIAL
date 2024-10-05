@@ -996,7 +996,9 @@ namespace StoreDataManager
 
         ///////////////////////////////////////////////// FUNCIONES AUXILIARES DEL SELECT ///////////////////////////////////////////////////////
 
-        private List<Dictionary<string, object>> GetRecordsFromTable(string tableName, List<Column> allColumns)
+        public List<Dictionary<string, object>> GetRecordsFromTable(string tableName, List<Column> allColumns)
+
+
         {
             string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
 
@@ -1031,6 +1033,63 @@ namespace StoreDataManager
 
             return records;
         }
+
+        // Esta funcion es la misma que la de arriba, pero para los indices, porque ocupo estar cambiando la base de datos
+        public List<Dictionary<string, object>> GetDataFromTable(string DataBaseName, string tableName, List<Column> allColumns)
+
+            
+        {
+            string DataBasePath = $@"{DataPath}\{DataBaseName}";
+
+            if (Directory.Exists(DataBasePath))
+            {
+
+                this.SettedDataBasePath = DataBasePath;
+                this.SettedDataBaseName = DataBaseName;
+
+            }
+
+
+            string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
+
+            if (!File.Exists(tablePath))
+            {
+                Console.WriteLine($"El archivo de la tabla '{tableName}' no existe.");
+                return new List<Dictionary<string, object>>();
+            }
+
+            var records = new List<Dictionary<string, object>>();
+
+            using (FileStream fs = new FileStream(tablePath, FileMode.Open, FileAccess.Read))
+            using (BinaryReader reader = new BinaryReader(fs))
+            {
+                while (fs.Position < fs.Length)
+                {
+                    var record = new Dictionary<string, object>();
+                    foreach (var column in allColumns)
+                    {
+                        object value = ReadValue(reader, column.DataType);
+                        record[column.Name] = value;
+                    }
+                    records.Add(record);
+
+                    Console.WriteLine("Registro leido:");
+                    foreach (var key in record.Keys)
+                    {
+                        Console.WriteLine($"Columna: {key}, Valor: {record[key]}");
+                    }
+                }
+            }
+
+            this.SettedDataBasePath = string.Empty;
+            this.SettedDataBaseName = string.Empty;
+
+            return records;
+        }
+
+
+
+
 
         private List<Dictionary<string, object>> FilteredRecordsWhere(List<Dictionary<string, object>> records, string whereClause, string tableName, List<Column> allColumns, string mode, string? settedColumn,  object? updateValue)
         {

@@ -43,6 +43,12 @@ namespace ApiInterface
 
                         DataType? columnDatatype = Store.GetInstance().GetColumnDataType(DataBaseName, tableName, columnName);
 
+                        List<Column> allColumns = Store.GetInstance().GetColumnsOfTable(DataBaseName, tableName);
+
+                        // Obtener los registros completos de la tabla
+                        List<Dictionary<string, object>> records = Store.GetInstance().GetDataFromTable(DataBaseName, tableName, allColumns);
+
+
                         // Acceder a la columna en el disco duro y obtener los datos
                         List<object> columnData = Store.GetInstance().GetColumnData(DataBaseName, tableName, columnName);
 
@@ -52,9 +58,10 @@ namespace ApiInterface
                             if (columnDatatype == DataType.INTEGER)
                             {
                                 var bst = new BinarySearchTree<int>();
-                                foreach (int value in columnData)
+                                foreach (var record in records)
                                 {
-                                    bst.insert(value); // Insertar valores en el BST
+                                    int value = (int)record[columnName];
+                                    bst.insert(value,record); // Insertar valores en el BST
                                     Console.WriteLine($"Valor {value} agregado al arbol del indice: {indexName}");
                                 }
 
@@ -66,13 +73,12 @@ namespace ApiInterface
                             else if (columnDatatype == DataType.VARCHAR)
                             {
                                 var bst = new BinarySearchTree<string>();
-                                foreach (string value in columnData)
+                                foreach (var record in records)
                                 {
-                                    bst.insert(value); // Insertar valores en el
-                                    Console.WriteLine($"Valor {value} agregado al arbol del indice: {indexName}");
+                                    string value = (string)record[columnName];
+                                    bst.insert(value, record);
+                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
-
-                                // Guardar el árbol en el diccionario en memoria
                                 Store.GetInstance().IndexTrees[indexName] = bst;
 
                             }
@@ -80,12 +86,12 @@ namespace ApiInterface
                             else if (columnDatatype == DataType.DOUBLE)
                             {
                                 var bst = new BinarySearchTree<double>();
-                                foreach (double value in columnData)
+                                foreach (var record in records)
                                 {
-                                    bst.insert(value); // Insertar valores en el BST
+                                    double value = (double)record[columnName];
+                                    bst.insert(value, record);
+                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
-
-                                // Guardar el árbol en el diccionario en memoria
                                 Store.GetInstance().IndexTrees[indexName] = bst;
 
                             }
@@ -93,12 +99,12 @@ namespace ApiInterface
                             else if (columnDatatype == DataType.DATETIME)
                             {
                                 var bst = new BinarySearchTree<DateTime>();
-                                foreach (DateTime value in columnData)
+                                foreach (var record in records)
                                 {
-                                    bst.insert(value); // Insertar valores en el BST
+                                    DateTime value = (DateTime)record[columnName];
+                                    bst.insert(value, record);
+                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
-
-                                // Guardar el árbol en el diccionario en memoria
                                 Store.GetInstance().IndexTrees[indexName] = bst;
 
                             }
@@ -111,51 +117,48 @@ namespace ApiInterface
                             if (columnDatatype == DataType.INTEGER)
                             {
                                 var bTree = new BTree<int>(3);
-                                foreach (int value in columnData)
+                                foreach (var record in records)
                                 {
-                                    bTree.Insert(value); // Insertar valores en el BTree
-                                    Console.WriteLine($"Valor {value} agregado al arbol del indice: {indexName}");
+                                    int value = (int)record[columnName];
+                                    bTree.Insert(value, record);
+                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
-
-                                // Guardar el árbol en el diccionario en memoria
                                 Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
 
                             else if (columnDatatype == DataType.DOUBLE)
                             {
                                 var bTree = new BTree<double>(3);
-                                foreach (double value in columnData)
+                                foreach (var record in records)
                                 {
-                                    bTree.Insert(value); // Insertar valores en el BTree
+                                    double value = (double)record[columnName];
+                                    bTree.Insert(value, record);
+                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
-
-                                // Guardar el árbol en el diccionario en memoria
                                 Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
 
                             else if (columnDatatype == DataType.VARCHAR)
                             {
                                 var bTree = new BTree<string>(3);
-                                foreach (string value in columnData)
+                                foreach (var record in records)
                                 {
-                                    bTree.Insert(value); // Insertar valores en el BTree
-                                    Console.WriteLine($"Valor {value} agregado al arbol del indice: {indexName}");
+                                    string value = (string)record[columnName];
+                                    bTree.Insert(value, record);
+                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
-
-                                // Guardar el árbol en el diccionario en memoria
                                 Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
 
                             else if (columnDatatype == DataType.DATETIME)
                             {
-                                var bTree = new BTree<string>(3);
-                                foreach (string value in columnData)
+                                var bTree = new BTree<DateTime>(3);
+                                foreach (var record in records)
                                 {
-                                    bTree.Insert(value); // Insertar valores en el BTree
-                                    
+                                    DateTime value = (DateTime)record[columnName];
+                                    bTree.Insert(value, record);
+                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
-
-                                // Guardar el árbol en el diccionario en memoria
                                 Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
 

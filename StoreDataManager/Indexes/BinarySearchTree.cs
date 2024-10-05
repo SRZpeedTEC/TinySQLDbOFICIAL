@@ -16,49 +16,49 @@ namespace ApiInterface.Indexes
         }
 
         // Funciones de búsqueda
-        public bool search(T key)
+
+        public Dictionary<string, object> search(T key)
         {
             return searchRecursive(root, key);
         }
 
-        private bool searchRecursive(TreeNode<T> root, T key)
+        private Dictionary<string, object> searchRecursive(TreeNode<T> root, T key)
         {
-            if (root == null || root.key.CompareTo(key) == 0)
-                return root != null;
+            if (root == null)
+                return null; // Si no encuentra el nodo, devuelve null
 
-            // Si la clave actual es menor que la clave buscada
+            if (root.key.CompareTo(key) == 0)
+                return root.record; // Si encuentra la clave, devuelve el registro
+
             if (root.key.CompareTo(key) < 0)
-                return searchRecursive(root.right, key);
+                return searchRecursive(root.right, key); // Buscar en el subárbol derecho
 
-            // Si la clave actual es mayor que la clave buscada
-            return searchRecursive(root.left, key);
+            return searchRecursive(root.left, key); // Buscar en el subárbol izquierdo
         }
 
-        // Funciones de inserción de elementos
-        public void insert(T key)
+        // Función de inserción actualizada para aceptar un registro asociado
+        public void insert(T key, Dictionary<string, object> record)
         {
-            root = insertRecursive(root, key);
+            root = insertRecursive(root, key, record);
         }
 
-        private TreeNode<T> insertRecursive(TreeNode<T> root, T key)
+        private TreeNode<T> insertRecursive(TreeNode<T> root, T key, Dictionary<string, object> record)
         {
             if (root == null)
             {
-                root = new TreeNode<T>(key);
+                root = new TreeNode<T>(key, record); // Crear un nodo con la clave y el registro
                 return root;
             }
 
-            // Si la clave es menor que la clave del nodo actual, inserta en el subárbol izquierdo
             if (key.CompareTo(root.key) < 0)
-                root.left = insertRecursive(root.left, key);
-            // Si la clave es mayor, inserta en el subárbol derecho
+                root.left = insertRecursive(root.left, key, record);
             else if (key.CompareTo(root.key) > 0)
-                root.right = insertRecursive(root.right, key);
+                root.right = insertRecursive(root.right, key, record);
 
             return root;
         }
 
-        // Funciones de eliminación de elementos
+        // Función de eliminación (sin cambios en este caso)
         public void delete(T key)
         {
             root = deleteRecursive(root, key);
@@ -75,16 +75,12 @@ namespace ApiInterface.Indexes
                 root.right = deleteRecursive(root.right, key);
             else
             {
-                // Nodo con solo un hijo o sin hijos
                 if (root.left == null)
                     return root.right;
                 else if (root.right == null)
                     return root.left;
 
-                // Nodo con dos hijos: Obtener el valor mínimo en el subárbol derecho
                 root.key = minValue(root.right);
-
-                // Eliminar el nodo más pequeño del subárbol derecho
                 root.right = deleteRecursive(root.right, root.key);
             }
             return root;
@@ -101,4 +97,5 @@ namespace ApiInterface.Indexes
             return minValue;
         }
     }
+
 }

@@ -15,29 +15,30 @@ namespace ApiInterface.Indexes
         public BTree(int t)
         {
             this.root = null;
-            this.t = t;  // El grado mínimo t es una propiedad importante del B-tree
+            this.t = t;
         }
 
-        // Función de búsqueda
-        public BTreeNode<T> Search(T key)
+        // Función de búsqueda que devuelve el registro asociado a la clave
+        public Dictionary<string, object> Search(T key)
         {
             return root == null ? null : Search(root, key);
         }
 
-        // Función recursiva de búsqueda
-        private BTreeNode<T> Search(BTreeNode<T> node, T key)
+        // Función recursiva de búsqueda que devuelve el registro
+        private Dictionary<string, object> Search(BTreeNode<T> node, T key)
         {
             int i = 0;
+
             // Encuentra la primera clave mayor o igual que key
             while (i < node.numKeys && key.CompareTo(node.keys[i]) > 0)
             {
                 i++;
             }
 
-            // Si la clave es igual a la clave encontrada, devuelve este nodo
+            // Si la clave es igual a la clave encontrada, devuelve el registro asociado
             if (i < node.numKeys && key.CompareTo(node.keys[i]) == 0)
             {
-                return node;
+                return node.records[i];
             }
 
             // Si llegamos aquí y el nodo es una hoja, la clave no está en el árbol
@@ -50,14 +51,15 @@ namespace ApiInterface.Indexes
             return Search(node.children[i], key);
         }
 
-        // Función de inserción
-        public void Insert(T key)
+        // Función de inserción actualizada para aceptar un registro asociado a la clave
+        public void Insert(T key, Dictionary<string, object> record)
         {
             // Si el árbol está vacío, crear la raíz
             if (root == null)
             {
                 root = new BTreeNode<T>(t, true);
                 root.keys[0] = key;  // Insertar la clave
+                root.records[0] = record;  // Insertar el registro asociado
                 root.numKeys = 1;  // Actualizar el número de claves
             }
             else
@@ -68,12 +70,12 @@ namespace ApiInterface.Indexes
                     BTreeNode<T> newRoot = new BTreeNode<T>(t, false);
                     newRoot.children[0] = root;  // La antigua raíz es ahora el primer hijo
                     SplitChild(newRoot, 0, root);  // Dividir la antigua raíz y mover una clave
-                    InsertNonFull(newRoot, key);  // Insertar en el nodo adecuado
+                    InsertNonFull(newRoot, key, record);  // Insertar en el nodo adecuado
                     root = newRoot;  // Actualizar la nueva raíz
                 }
                 else
                 {
-                    InsertNonFull(root, key);
+                    InsertNonFull(root, key, record);
                 }
             }
         }
@@ -84,10 +86,11 @@ namespace ApiInterface.Indexes
             BTreeNode<T> newChild = new BTreeNode<T>(t, fullChild.isLeaf);
             newChild.numKeys = t - 1;  // El nuevo hijo tendrá t-1 claves
 
-            // Copiar las claves del nodo lleno al nuevo nodo
+            // Copiar las claves y registros del nodo lleno al nuevo nodo
             for (int j = 0; j < t - 1; j++)
             {
                 newChild.keys[j] = fullChild.keys[j + t];
+                newChild.records[j] = fullChild.records[j + t];
             }
 
             // Si no es una hoja, también copiamos los hijos
@@ -114,15 +117,17 @@ namespace ApiInterface.Indexes
             for (int j = parent.numKeys - 1; j >= i; j--)
             {
                 parent.keys[j + 1] = parent.keys[j];
+                parent.records[j + 1] = parent.records[j];
             }
 
             // Insertar la clave del medio del nodo lleno en el padre
             parent.keys[i] = fullChild.keys[t - 1];
+            parent.records[i] = fullChild.records[t - 1];
             parent.numKeys++;
         }
 
         // Función auxiliar para insertar una clave en un nodo que no está lleno
-        private void InsertNonFull(BTreeNode<T> node, T key)
+        private void InsertNonFull(BTreeNode<T> node, T key, Dictionary<string, object> record)
         {
             int i = node.numKeys - 1;
 
@@ -133,10 +138,12 @@ namespace ApiInterface.Indexes
                 while (i >= 0 && key.CompareTo(node.keys[i]) < 0)
                 {
                     node.keys[i + 1] = node.keys[i];
+                    node.records[i + 1] = node.records[i];
                     i--;
                 }
 
                 node.keys[i + 1] = key;  // Insertar la nueva clave
+                node.records[i + 1] = record;  // Insertar el registro asociado
                 node.numKeys++;  // Incrementar el número de claves
             }
             else
@@ -160,10 +167,9 @@ namespace ApiInterface.Indexes
                     }
                 }
 
-                InsertNonFull(node.children[i], key);
+                InsertNonFull(node.children[i], key, record);
             }
         }
-
-
     }
+
 }
