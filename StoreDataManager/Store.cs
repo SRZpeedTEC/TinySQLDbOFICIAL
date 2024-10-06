@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Text.RegularExpressions;
+using ApiInterface.Indexes;
 
 
 namespace StoreDataManager
@@ -34,7 +35,19 @@ namespace StoreDataManager
         private const string SystemTablesFile = $@"{SystemCatalogPath}\SystemTables.table";
         private const string SystemColumnsFile = $@"{SystemCatalogPath}\SystemColumns.table";
         private const string SystemIndexesFile = $@"{SystemCatalogPath}\SystemIndexes.table";
+
+
+
         public Dictionary<string, object> IndexTrees = new Dictionary<string, object>();
+        public Dictionary<string, string> AssociatedIndexesToColumns = new Dictionary<string, string>();
+        public List<string> DataBasesWithIndexes = new List<string>();
+        public List<string> TablesWithIndexes = new List<string>();
+        public List<string> ColumnsWithIndexes = new List<string>();
+
+        
+
+
+
         private string SettedDataBasePath = string.Empty;
         private string SettedDataBaseName = string.Empty;
 
@@ -735,7 +748,64 @@ namespace StoreDataManager
             return null;
         }
 
+        public string GetAssociatedIndex(string dataBaseName, string tableName, string columnName)
+        {
+            // Acceder al diccionario para obtener el nombre del índice asociado a la columna
+            if (AssociatedIndexesToColumns.TryGetValue(columnName, out string indexName))
+            {
+                Console.WriteLine($"Índice asociado encontrado: {indexName}");
+                return indexName;
+            }
+            else
+            {
+                Console.WriteLine($"No se encontró un índice asociado para la columna {columnName} en la tabla {tableName} de la base de datos {dataBaseName}.");
+                return null;
+            }
+        }
 
+        // Método para obtener todos los registros de un índice dado su nombre
+        public List<Dictionary<string, object>> GetRecordsFromIndex(string indexName)
+        {
+            if (IndexTrees.TryGetValue(indexName, out object tree))
+            {
+                // Verificar el tipo de árbol y llamar a GetAllRecords
+                switch (tree)
+                {
+                    case BinarySearchTree<int> bstInt:
+                        return bstInt.GetAllRecords();
+
+                    case BinarySearchTree<string> bstString:
+                        return bstString.GetAllRecords();
+
+                    case BinarySearchTree<double> bstDouble:
+                        return bstDouble.GetAllRecords();
+
+                    case BinarySearchTree<DateTime> bstDateTime:
+                        return bstDateTime.GetAllRecords();
+
+                    case BTree<int> btreeInt:
+                        return btreeInt.GetAllRecords();
+
+                    case BTree<string> btreeString:
+                        return btreeString.GetAllRecords();
+
+                    case BTree<double> btreeDouble:
+                        return btreeDouble.GetAllRecords();
+
+                    case BTree<DateTime> btreeDateTime:
+                        return btreeDateTime.GetAllRecords();
+
+                    default:
+                        Console.WriteLine("Tipo de árbol no soportado.");
+                        return null;
+                }
+            }
+            else
+            {
+                Console.WriteLine("El índice especificado no existe.");
+                return null;
+            }
+        }
 
         ///////////////////////////////////////////////// FINAL FUNCIONES INDICES ///////////////////////////////////////////////////////
 
@@ -788,7 +858,27 @@ namespace StoreDataManager
                 }
             }
 
-            var records = GetRecordsFromTable(tableName, allColumns);
+            var records = new List<Dictionary<string, object>>();
+
+            
+            foreach (var col in selectedColumns)
+            {
+                string? indexName = GetAssociatedIndex(SettedDataBaseName, tableName, col.Name);
+                if (indexName != null)
+                {
+                    records = GetRecordsFromIndex(indexName);
+                    Console.WriteLine("USANDO INDICES EN MEMORIA PARA ESTE REQUEST");
+                    break;
+                }    
+            }
+
+            
+            if (records == null)
+
+            {
+              records = GetRecordsFromTable(tableName, allColumns);
+            }
+
 
             if (records == null)
             {
@@ -1073,10 +1163,10 @@ namespace StoreDataManager
                     }
                     records.Add(record);
 
-                    Console.WriteLine("Registro leido:");
+                    //Console.WriteLine("Registro leido:");
                     foreach (var key in record.Keys)
                     {
-                        Console.WriteLine($"Columna: {key}, Valor: {record[key]}");
+                        //Console.WriteLine($"Columna: {key}, Valor: {record[key]}");
                     }
                 }
             }

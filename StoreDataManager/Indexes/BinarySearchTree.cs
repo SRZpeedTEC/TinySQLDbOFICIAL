@@ -96,6 +96,27 @@ namespace ApiInterface.Indexes
             }
             return minValue;
         }
+
+        // Función para obtener todos los registros en una lista de diccionarios
+        public List<Dictionary<string, object>> GetAllRecords()
+        {
+            List<Dictionary<string, object>> recordsList = new List<Dictionary<string, object>>();
+            InOrderTraversal(root, recordsList);
+            return recordsList;
+        }
+
+        // Recorrido en orden (In-Order Traversal) para agregar los registros a la lista
+        private void InOrderTraversal(TreeNode<T> node, List<Dictionary<string, object>> recordsList)
+        {
+            if (node != null)
+            {
+                InOrderTraversal(node.left, recordsList); 
+                recordsList.Add(node.record);
+                InOrderTraversal(node.right, recordsList); 
+            }
+        }
+
+
     }
 
 }

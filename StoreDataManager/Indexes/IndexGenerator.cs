@@ -12,13 +12,13 @@ namespace ApiInterface
 {
     public class IndexGenerator
     {
-        // Diccionario en memoria para almacenar los árboles por índice.
+
         
 
         public void LoadIndexesAndGenerateTrees()
         {
-
-            string systemIndexesFile = Store.GetInstance().GetSystemIndexesFile();
+            var store = Store.GetInstance();
+            string systemIndexesFile = store.GetSystemIndexesFile();
 
             if (!File.Exists(systemIndexesFile))
             {
@@ -41,16 +41,39 @@ namespace ApiInterface
                         string columnName = reader.ReadString();
                         string indexType = reader.ReadString();
 
-                        DataType? columnDatatype = Store.GetInstance().GetColumnDataType(DataBaseName, tableName, columnName);
+                        DataType? columnDatatype = store.GetColumnDataType(DataBaseName, tableName, columnName);
 
-                        List<Column> allColumns = Store.GetInstance().GetColumnsOfTable(DataBaseName, tableName);
+                        List<Column> allColumns = store.GetColumnsOfTable(DataBaseName, tableName);
 
                         // Obtener los registros completos de la tabla
-                        List<Dictionary<string, object>> records = Store.GetInstance().GetDataFromTable(DataBaseName, tableName, allColumns);
+                        List<Dictionary<string, object>> records = store.GetDataFromTable(DataBaseName, tableName, allColumns);
 
 
                         // Acceder a la columna en el disco duro y obtener los datos
-                        List<object> columnData = Store.GetInstance().GetColumnData(DataBaseName, tableName, columnName);
+                        List<object> columnData = store.GetColumnData(DataBaseName, tableName, columnName);
+
+
+                        // Agregar los datos a las listas del Store
+                       
+
+                        if (!store.DataBasesWithIndexes.Contains(DataBaseName))
+                        {
+                            store.DataBasesWithIndexes.Add(DataBaseName);
+                        }
+
+                        if (!store.TablesWithIndexes.Contains(tableName))
+                        {
+                            store.TablesWithIndexes.Add(tableName);
+                        }
+
+                        if (!store.ColumnsWithIndexes.Contains(columnName))
+                        {
+                            store.ColumnsWithIndexes.Add(columnName);
+                        }
+
+                        // Asociar columna con nombre del índice
+                        store.AssociatedIndexesToColumns[columnName] = indexName;
+
 
                         // Verificar el tipo de índice y crear el árbol correspondiente
                         if (indexType.Equals("BST", StringComparison.OrdinalIgnoreCase))

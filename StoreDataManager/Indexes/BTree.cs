@@ -170,6 +170,41 @@ namespace ApiInterface.Indexes
                 InsertNonFull(node.children[i], key, record);
             }
         }
+
+        public List<Dictionary<string, object>> GetAllRecords()
+        {
+            List<Dictionary<string, object>> recordsList = new List<Dictionary<string, object>>();
+            if (root != null)
+            {
+                GetAllRecordsRecursive(root, recordsList);
+            }
+            return recordsList;
+        }
+
+        // Función recursiva que realiza el recorrido en orden (In-Order)
+        private void GetAllRecordsRecursive(BTreeNode<T> node, List<Dictionary<string, object>> recordsList)
+        {
+            int i;
+            // Recorrer los nodos hijos hasta el índice numKeys
+            for (i = 0; i < node.numKeys; i++)
+            {
+                // Si no es hoja, recorrer el subárbol antes de la clave actual
+                if (!node.isLeaf)
+                {
+                    GetAllRecordsRecursive(node.children[i], recordsList);
+                }
+
+                // Añadir el registro actual a la lista
+                recordsList.Add(node.records[i]);
+            }
+
+            // Recorrer el subárbol después de la última clave
+            if (!node.isLeaf)
+            {
+                GetAllRecordsRecursive(node.children[i], recordsList);
+            }
+        }
+
     }
 
 }
