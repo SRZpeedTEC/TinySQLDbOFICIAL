@@ -85,7 +85,7 @@ namespace ApiInterface
                                 {
                                     int value = (int)record[columnName];
                                     bst.insert(value,record); // Insertar valores en el BST
-                                    Console.WriteLine($"Valor {value} agregado al arbol del indice: {indexName}");
+                                    //Console.WriteLine($"Valor {value} agregado al arbol del indice: {indexName}");
                                 }
 
                                 // Guardar el árbol en el diccionario en memoria
@@ -100,7 +100,7 @@ namespace ApiInterface
                                 {
                                     string value = (string)record[columnName];
                                     bst.insert(value, record);
-                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
+                                    //Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
                                 Store.GetInstance().IndexTrees[indexName] = bst;
 
@@ -113,7 +113,7 @@ namespace ApiInterface
                                 {
                                     double value = (double)record[columnName];
                                     bst.insert(value, record);
-                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
+                                    //Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
                                 Store.GetInstance().IndexTrees[indexName] = bst;
 
@@ -126,7 +126,7 @@ namespace ApiInterface
                                 {
                                     DateTime value = (DateTime)record[columnName];
                                     bst.insert(value, record);
-                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
+                                    //Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
                                 Store.GetInstance().IndexTrees[indexName] = bst;
 
@@ -144,7 +144,7 @@ namespace ApiInterface
                                 {
                                     int value = (int)record[columnName];
                                     bTree.Insert(value, record);
-                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
+                                    //Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
                                 Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
@@ -156,7 +156,7 @@ namespace ApiInterface
                                 {
                                     double value = (double)record[columnName];
                                     bTree.Insert(value, record);
-                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
+                                    //Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
                                 Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
@@ -168,7 +168,7 @@ namespace ApiInterface
                                 {
                                     string value = (string)record[columnName];
                                     bTree.Insert(value, record);
-                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
+                                    //Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
                                 Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
@@ -180,7 +180,7 @@ namespace ApiInterface
                                 {
                                     DateTime value = (DateTime)record[columnName];
                                     bTree.Insert(value, record);
-                                    Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
+                                    //Console.WriteLine($"Valor {value} agregado al árbol del índice: {indexName}");
                                 }
                                 Store.GetInstance().IndexTrees[indexName] = bTree;
                             }
@@ -198,8 +198,27 @@ namespace ApiInterface
             Console.WriteLine("Índices cargados y árboles generados en memoria.");
         }
 
-        
+        public void RegenerateIndexes()
+        {
+            var store = Store.GetInstance();
+
+            // Limpiar los árboles de índices en memoria
+            store.IndexTrees.Clear(); // Esto borra todos los árboles de índices en memoria
+
+            // Limpiar las listas de bases de datos, tablas y columnas con índices
+            store.DataBasesWithIndexes.Clear();
+            store.TablesWithIndexes.Clear();
+            store.ColumnsWithIndexes.Clear();
+            store.AssociatedIndexesToColumns.Clear();
+
+            // Volver a generar los índices
+            Console.WriteLine("Generando nuevamente los índices...");
+            LoadIndexesAndGenerateTrees();
+            Console.WriteLine("Regeneración de índices completada.");
+        }
+
+
 
     }
-    
+
 }

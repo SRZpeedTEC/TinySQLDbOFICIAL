@@ -7,6 +7,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Text.RegularExpressions;
 using ApiInterface.Indexes;
+using ApiInterface;
 
 
 namespace StoreDataManager
@@ -452,6 +453,19 @@ namespace StoreDataManager
             }
 
             Console.WriteLine("Valores insertados correctamente.");
+
+            string SettedDBNAME = SettedDataBaseName; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
+            string SettedDBPATH = SettedDataBasePath;
+
+
+            
+            IndexGenerator indexGenerator = new IndexGenerator();
+
+            indexGenerator.RegenerateIndexes();
+
+            this.SettedDataBasePath = SettedDBPATH; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
+            this.SettedDataBaseName = SettedDBNAME;
+
             return OperationStatus.Success;
 
         }
@@ -860,23 +874,26 @@ namespace StoreDataManager
 
             var records = new List<Dictionary<string, object>>();
 
-            
-            foreach (var col in selectedColumns)
+            if (DataBasesWithIndexes.Contains(SettedDataBaseName) && TablesWithIndexes.Contains(tableName)) 
             {
-                string? indexName = GetAssociatedIndex(SettedDataBaseName, tableName, col.Name);
-                if (indexName != null)
-                {
-                    records = GetRecordsFromIndex(indexName);
-                    Console.WriteLine("USANDO INDICES EN MEMORIA PARA ESTE REQUEST");
-                    break;
-                }    
+                    foreach (var col in selectedColumns)
+                    {
+                        string? indexName = GetAssociatedIndex(SettedDataBaseName, tableName, col.Name);
+                        if (indexName != null)
+                        {
+                            records = GetRecordsFromIndex(indexName);
+                            Console.WriteLine("USANDO INDICES EN MEMORIA PARA ESTE REQUEST");
+                            break;
+                        }    
+                    }
             }
 
-            
-            if (records == null)
+
+            if (records == null || records.Count == 0)
 
             {
-              records = GetRecordsFromTable(tableName, allColumns);
+                Console.WriteLine("no hay indices asoicados");
+                records = GetRecordsFromTable(tableName, allColumns);
             }
 
 
@@ -1016,7 +1033,19 @@ namespace StoreDataManager
                 }
             }
 
+            string SettedDBNAME = SettedDataBaseName; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
+            string SettedDBPATH = SettedDataBasePath;
+
+
             Console.WriteLine("Valores actualizados correctamente.");
+            IndexGenerator indexGenerator = new IndexGenerator();
+
+
+            indexGenerator.RegenerateIndexes();
+
+            this.SettedDataBasePath = SettedDBPATH; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
+            this.SettedDataBaseName = SettedDBNAME;
+
             return OperationStatus.Success;
 
         }
@@ -1028,6 +1057,8 @@ namespace StoreDataManager
         {
             // Verificar que la base de datos está establecida
             string mode = "DEFAULT";
+
+            
 
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
@@ -1078,6 +1109,15 @@ namespace StoreDataManager
                     }
                 }
             }
+
+            string SettedDBNAME = SettedDataBaseName; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
+            string SettedDBPATH = SettedDataBasePath;
+
+            IndexGenerator indexGenerator = new IndexGenerator();
+            indexGenerator.RegenerateIndexes();
+
+            this.SettedDataBasePath = SettedDBPATH; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
+            this.SettedDataBaseName = SettedDBNAME;
 
             return OperationStatus.Success;
         }
