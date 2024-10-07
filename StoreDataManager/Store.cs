@@ -1275,23 +1275,21 @@ namespace StoreDataManager
             
         }
 
-        private List<Dictionary<string, object>> FilteredRecordsOrderBy(List<Dictionary<string, object>> records, string orderByColumn, string orderByDirection, string tableName, List<Column> allColumns) 
+        private List<Dictionary<string, object>> FilteredRecordsOrderBy(List<Dictionary<string, object>> records, string orderByColumn, string orderByDirection, string tableName, List<Column> allColumns)
         {
             var orderByCol = allColumns.FirstOrDefault(c => c.Name.Equals(orderByColumn, StringComparison.OrdinalIgnoreCase));
             if (orderByCol == null)
             {
                 Console.WriteLine($"La columna '{orderByColumn}' no existe en la tabla '{tableName}'.");
-                return records = null;
+                return null;
             }
 
-            if (orderByDirection.Equals("DESC", StringComparison.OrdinalIgnoreCase))
-            {
-                return records = records.OrderByDescending(r => r[orderByCol.Name]).ToList();
-            }
-            else
-            {
-                return records = records.OrderBy(r => r[orderByCol.Name]).ToList();
-            }
+            bool descending = orderByDirection.Equals("DESC", StringComparison.OrdinalIgnoreCase);
+
+            // Llamar a Quicksort
+            QuickSort(records, 0, records.Count - 1, orderByCol.Name, descending);
+
+            return records;
         }
 
 
@@ -1414,36 +1412,84 @@ namespace StoreDataManager
             }
         }
 
-        private int CompareValues(object recordValue, string valueStr)
+        private int CompareValues(object value1, object value2)
         {
-            if (recordValue is int intValue && int.TryParse(valueStr, out int compareInt))
+            if (value1 == null && value2 == null)
+                return 0;
+            if (value1 == null)
+                return -1;
+            if (value2 == null)
+                return 1;
+
+            if (value1 is int int1 && value2 is int int2)
             {
-                return intValue.CompareTo(compareInt);
+                return int1.CompareTo(int2);
             }
-            else if (recordValue is double doubleValue && double.TryParse(valueStr, out double compareDouble))
+            else if (value1 is double double1 && value2 is double double2)
             {
-                return doubleValue.CompareTo(compareDouble);
+                return double1.CompareTo(double2);
             }
-            else if (recordValue is string strValue)
+            else if (value1 is string str1 && value2 is string str2)
             {
-                return string.Compare(strValue, valueStr, StringComparison.OrdinalIgnoreCase);
+                return string.Compare(str1, str2, StringComparison.OrdinalIgnoreCase);
             }
-            else if (recordValue is DateTime dateTimeValue && DateTime.TryParse(valueStr, out DateTime compareDateTime))
+            else if (value1 is DateTime date1 && value2 is DateTime date2)
             {
-                return dateTimeValue.CompareTo(compareDateTime);
+                return date1.CompareTo(date2);
             }
             else
             {
-                throw new Exception("Tipos de datos no comparables.");
+                throw new Exception("Tipos de datos no comparables o incompatibles.");
             }
         }
 
+        private void QuickSort(List<Dictionary<string, object>> records, int low, int high, string columnName, bool descending)
+        {
+            if (low < high)
+            {
+                int pivotIndex = Partition(records, low, high, columnName, descending);
+                QuickSort(records, low, pivotIndex - 1, columnName, descending);
+                QuickSort(records, pivotIndex + 1, high, columnName, descending);
+            }
+        }
 
+        private int Partition(List<Dictionary<string, object>> records, int low, int high, string columnName, bool descending)
+        {
+            var pivotValue = records[high][columnName];
+            int i = low - 1;
 
+            for (int j = low; j < high; j++)
+            {
+                int comparisonResult = CompareValues(records[j][columnName], pivotValue);
+                if (descending)
+                {
+                    if (comparisonResult > 0)
+                    {
+                        i++;
+                        Swap(records, i, j);
+                    }
+                }
+                else
+                {
+                    if (comparisonResult < 0)
+                    {
+                        i++;
+                        Swap(records, i, j);
+                    }
+                }
+            }
 
+            Swap(records, i + 1, high);
+            return i + 1;
+        }
 
-        
+        private void Swap(List<Dictionary<string, object>> records, int index1, int index2)
+        {
+            var temp = records[index1];
+            records[index1] = records[index2];
+            records[index2] = temp;
+        }
+
     }
-
 
 }
