@@ -396,7 +396,6 @@ namespace StoreDataManager
 
         public OperationStatus InsertInto(string tableName, List<string> values)
         {
-
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
                 Console.WriteLine("No se ha establecido una base de datos.");
@@ -438,6 +437,21 @@ namespace StoreDataManager
                     Console.WriteLine($"Error al convertir el valor '{valueStr}' para la columna '{column.Name}': {ex.Message}");
                     return OperationStatus.Error;
                 }
+
+                // Verificar si la columna tiene un índice
+                string existingIndex = GetIndexNameIfExist(SettedDataBaseName, tableName, column.Name);
+                if (existingIndex != null)
+                {
+                    // Obtener los datos de la columna con el índice
+                    List<object> columnData = GetColumnData(SettedDataBaseName, tableName, column.Name);
+
+                    // Verificar si el valor ya existe en la columna
+                    if (columnData.Contains(convertedValue))
+                    {
+                        Console.WriteLine($"El valor '{convertedValue}' ya existe en la columna '{column.Name}', que tiene un índice asociado. No se puede insertar un valor duplicado.");
+                        return OperationStatus.Error; // Retornar error si el valor ya existe en la columna
+                    }
+                }
             }
 
             // Insertar los valores en el archivo de la tabla
@@ -454,21 +468,18 @@ namespace StoreDataManager
 
             Console.WriteLine("Valores insertados correctamente.");
 
-            string SettedDBNAME = SettedDataBaseName; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
+            string SettedDBNAME = SettedDataBaseName; // Un ajuste para que la base de datos se mantenga correctamente después de actualizar los índices
             string SettedDBPATH = SettedDataBasePath;
 
-
-            
             IndexGenerator indexGenerator = new IndexGenerator();
-
             indexGenerator.RegenerateIndexes();
 
-            this.SettedDataBasePath = SettedDBPATH; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
+            this.SettedDataBasePath = SettedDBPATH; // Ajuste para mantener la base de datos seteada
             this.SettedDataBaseName = SettedDBNAME;
 
             return OperationStatus.Success;
-
         }
+
 
 
         ///////////////////////////////////////////////// FUNCIONES AUXILIARES DEL INSERT INTO ///////////////////////////////////////////////////////
@@ -551,8 +562,8 @@ namespace StoreDataManager
 
 
         // esto es basicamente un add index to system indexes
-        public OperationStatus CreateIndex(string indexName, string tableName, string columnName, string indexType) 
-            {
+        public OperationStatus CreateIndex(string indexName, string tableName, string columnName, string indexType)
+        {
             // Verificar que la base de datos está establecida
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
@@ -586,28 +597,46 @@ namespace StoreDataManager
                 Console.WriteLine($"La columna '{columnName}' no existe en la tabla '{tableName}'.");
                 return OperationStatus.Error;
             }
-            
-  
+
+            // Verificar si ya existe un índice asociado a la columna
+            string existingIndex = GetIndexNameIfExist(SettedDataBaseName, tableName, columnName);
+            if (existingIndex != null)
+            {
+                Console.WriteLine($"Ya existe un índice asociado a la columna '{columnName}' en la tabla '{tableName}'. Índice existente: {existingIndex}");
+                return OperationStatus.Error;
+            }
+
+            // Obtener los datos de la columna
+            List<object> columnData = GetColumnData(SettedDataBaseName, tableName, columnName);
+
+            // Verificar si hay datos duplicados
+            if (columnData.Count != columnData.Distinct().Count())
+            {
+                Console.WriteLine($"La columna '{columnName}' contiene datos duplicados. No se puede crear el índice.");
+                return OperationStatus.Error; // Retornar error si se encuentran datos duplicados
+            }
+
+            // Si no hay duplicados, proceder a crear el índice
             using (FileStream stream = File.Open(SystemIndexesFile, FileMode.OpenOrCreate, FileAccess.Write))
             {
-                stream.Seek(0, SeekOrigin.End);
+                stream.Seek(0, SeekOrigin.End); // Mover el puntero al final para agregar nuevo índice
 
                 using (BinaryWriter writer = new(stream))
                 {
-
                     writer.Write(SettedDataBaseName);
                     writer.Write(tableName);
                     writer.Write(indexName);
                     writer.Write(columnName);
                     writer.Write(indexType);
-
-
                 }
             }
 
+            Console.WriteLine($"Índice '{indexName}' creado exitosamente para la columna '{columnName}' en la tabla '{tableName}'.");
 
             return OperationStatus.Success;
-            }
+        }
+
+
 
 
 
