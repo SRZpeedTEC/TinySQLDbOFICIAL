@@ -657,6 +657,17 @@ namespace StoreDataManager
 
             Console.WriteLine($"Índice '{indexName}' creado exitosamente para la columna '{columnName}' en la tabla '{tableName}'.");
 
+
+            string originalDBName = SettedDataBaseName;
+            string originalDBPath = SettedDataBasePath;
+
+            IndexGenerator indexGenerator = new IndexGenerator();
+            indexGenerator.RegenerateIndexes();
+
+            // Restaurar los valores originales de la base de datos
+            this.SettedDataBaseName = originalDBName;
+            this.SettedDataBasePath = originalDBPath;
+
             return OperationStatus.Success;
         }
 
