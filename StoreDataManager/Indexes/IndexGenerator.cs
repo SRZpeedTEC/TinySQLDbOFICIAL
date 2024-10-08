@@ -195,7 +195,7 @@ namespace ApiInterface
                 }
             }
 
-            Console.WriteLine("Índices cargados y árboles generados en memoria.");
+            
         }
 
         public void RegenerateIndexes()
@@ -212,9 +212,8 @@ namespace ApiInterface
             store.AssociatedIndexesToColumns.Clear();
 
             // Volver a generar los índices
-            Console.WriteLine("Generando nuevamente los índices...");
             LoadIndexesAndGenerateTrees();
-            Console.WriteLine("Regeneración de índices completada.");
+            Console.WriteLine("Actualización de índices completada.");
         }
 
 

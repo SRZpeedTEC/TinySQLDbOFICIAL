@@ -401,6 +401,7 @@ namespace StoreDataManager
                 Console.WriteLine("No se ha establecido una base de datos.");
                 return OperationStatus.Error;
             }
+            
 
             // Verificar que la tabla existe
             List<string> tables = GetTablesInDataBase(SettedDataBaseName);
@@ -438,6 +439,8 @@ namespace StoreDataManager
                     return OperationStatus.Error;
                 }
 
+                
+
                 // Verificar si la columna tiene un índice
                 string existingIndex = GetIndexNameIfExist(SettedDataBaseName, tableName, column.Name);
                 if (existingIndex != null)
@@ -457,28 +460,49 @@ namespace StoreDataManager
             // Insertar los valores en el archivo de la tabla
             string tablePath = Path.Combine(SettedDataBasePath, $"{tableName}.table");
 
-            using (FileStream fs = new FileStream(tablePath, FileMode.Append, FileAccess.Write))
-            using (BinaryWriter writer = new BinaryWriter(fs))
+            try
             {
-                foreach (var value in convertedValues)
+                using (FileStream fs = new FileStream(tablePath, FileMode.Append, FileAccess.Write))
+                using (BinaryWriter writer = new BinaryWriter(fs))
                 {
-                    WriteValue(writer, value);
+                    foreach (var value in convertedValues)
+                    {
+                        WriteValue(writer, value);
+                    }
                 }
+
+                Console.WriteLine("Valores insertados correctamente.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al insertar los valores en la tabla '{tableName}': {ex.Message}");
+                return OperationStatus.Error;
             }
 
-            Console.WriteLine("Valores insertados correctamente.");
+            // Regenerar los índices si la inserción fue exitosa
+            try
+            {
+                string originalDBName = SettedDataBaseName;
+                string originalDBPath = SettedDataBasePath;
 
-            string SettedDBNAME = SettedDataBaseName; // Un ajuste para que la base de datos se mantenga correctamente después de actualizar los índices
-            string SettedDBPATH = SettedDataBasePath;
+                IndexGenerator indexGenerator = new IndexGenerator();
+                indexGenerator.RegenerateIndexes();
 
-            IndexGenerator indexGenerator = new IndexGenerator();
-            indexGenerator.RegenerateIndexes();
+                // Restaurar los valores originales de la base de datos
+                this.SettedDataBaseName = originalDBName;
+                this.SettedDataBasePath = originalDBPath;
 
-            this.SettedDataBasePath = SettedDBPATH; // Ajuste para mantener la base de datos seteada
-            this.SettedDataBaseName = SettedDBNAME;
+              
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al regenerar los índices: {ex.Message}");
+                return OperationStatus.Error;
+            }
 
             return OperationStatus.Success;
         }
+
 
 
 
@@ -644,6 +668,10 @@ namespace StoreDataManager
 
         public List<object> GetColumnData(string databaseName, string tableName, string columnName)
         {
+
+            string originalDBName = SettedDataBaseName;
+            string originalDBPath = SettedDataBasePath;
+
             var columnData = new List<object>();
 
             // Verificar que la base de datos existe
@@ -676,7 +704,9 @@ namespace StoreDataManager
 
             if (Directory.Exists(DataBasePath))
             {
+
                 
+
                 this.SettedDataBasePath = DataBasePath;
                 this.SettedDataBaseName = databaseName;
                                
@@ -707,8 +737,8 @@ namespace StoreDataManager
                 }
             }
 
-            this.SettedDataBasePath = string.Empty;
-            this.SettedDataBaseName = string.Empty;
+            this.SettedDataBasePath = originalDBPath;
+            this.SettedDataBaseName = originalDBName;
 
             return columnData;
         }
