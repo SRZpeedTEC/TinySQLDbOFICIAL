@@ -11,14 +11,13 @@ namespace QueryProcessor.Operations
 {
     internal class Update
     {
-        public OperationStatus Execute(string sentence)
+        public OperationResult Execute(string sentence)
         {
             var store = Store.GetInstance();
             var match = Regex.Match(sentence, @"UPDATE\s+(\w+)\s+SET\s+(\w+)\s*=\s*(.+?)\s+WHERE\s+(.+?);?$", RegexOptions.IgnoreCase);
 
             if (!match.Success) {
-                Console.WriteLine("Sintaxis de UPDATE incorrecta.");
-                return OperationStatus.Error;
+                return new OperationResult { Status = OperationStatus.Error, Message = "Sintaxis de UPDATE incorrecta." };
             }
 
             string tableName = match.Groups[1].Value;

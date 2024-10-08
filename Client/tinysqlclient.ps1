@@ -2,7 +2,8 @@ param (
     [Parameter(Mandatory = $true)]
     [string]$IP,
     [Parameter(Mandatory = $true)]
-    [int]$Port
+    [int]$Port,
+    [string]$QueryFile
 )
 
 $ipEndPoint = [System.Net.IPEndPoint]::new([System.Net.IPAddress]::Parse($IP), $Port)
@@ -114,3 +115,26 @@ function Send-SQLCommand {
     $client.Shutdown([System.Net.Sockets.SocketShutdown]::Both)
     $client.Close()
 }
+
+# Leer los comandos del archivo si se proporciona
+if (-not [string]::IsNullOrWhiteSpace($QueryFile)) {
+    # Verificar que el archivo de script existe
+    if (-not (Test-Path $QueryFile)) {
+        Write-Host -ForegroundColor Red "El archivo de script '$QueryFile' no existe."
+        exit
+    }
+
+    # Leer los comandos del archivo
+    $commands = Get-Content -Path $QueryFile
+
+    # Ejecutar los comandos
+    foreach ($command in $commands) {
+        if (-not [string]::IsNullOrWhiteSpace($command)) {
+            Send-SQLCommand -command $command
+        }
+    }
+} else {
+    # Si no se proporcionó un archivo de script, puedes incluir lógica adicional aquí si lo deseas
+    Write-Host -ForegroundColor Yellow "No se proporcionó un archivo de script. Continuando sin ejecutar comandos desde archivo."
+}
+

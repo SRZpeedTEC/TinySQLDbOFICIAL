@@ -6,7 +6,7 @@ namespace QueryProcessor.Operations
 {
     internal class CreateTable
     {
-        internal OperationStatus Execute(string TableName, List<Column> TableColumns)
+        internal OperationResult Execute(string TableName, List<Column> TableColumns)
         {
             return Store.GetInstance().CreateTable(TableName, TableColumns);
         }

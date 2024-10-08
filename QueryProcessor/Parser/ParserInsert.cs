@@ -16,7 +16,7 @@ namespace QueryProcessor.Parser
 
         
     {
-        public OperationStatus Parser(string sentence)
+        public OperationResult Parser(string sentence)
         {
             
             // Parsear la sentencia
@@ -24,8 +24,7 @@ namespace QueryProcessor.Parser
 
             if (!match.Success)
             {
-                Console.WriteLine("Sintaxis de INSERT INTO incorrecta.");
-                return OperationStatus.Error;
+                return new OperationResult { Status = OperationStatus.Error, Message = "Sintaxis de INSERT INTO incorrecta." };
             }
 
             string tableName = match.Groups[1].Value;

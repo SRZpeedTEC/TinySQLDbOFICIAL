@@ -11,7 +11,7 @@ namespace QueryProcessor.Operations
 {
     internal class Select
     {
-        public OperationStatus Execute(string sentence, out object? data)
+        public OperationResult Execute(string sentence, out object? data)
         {
             data = null;
             // Mostrar la sentencia para depuración
@@ -25,8 +25,7 @@ namespace QueryProcessor.Operations
 
             if (!match.Success)
             {
-                Console.WriteLine("Sintaxis de SELECT incorrecta.");
-                return OperationStatus.Error;
+                return new OperationResult { Status = OperationStatus.Error, Message = "Sintaxis de SELECT incorrecta." };
             }
 
             string columnsPart = match.Groups[1].Value;

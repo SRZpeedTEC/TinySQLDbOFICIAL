@@ -8,7 +8,7 @@ namespace QueryProcessor
 {
     public class SQLQueryProcessor
     {
-        public static OperationStatus Execute(string sentence, out object? data)
+        public static OperationResult Execute(string sentence, out object? data)
         {
             /// The following is example code. Parser should be called
             /// on the sentence to understand and process what is requested

@@ -12,7 +12,7 @@ namespace QueryProcessor.Operations
 {
     public class CreateIndex
     {
-        public OperationStatus Execute(string sentence)
+        public OperationResult Execute(string sentence)
         {
             var store = Store.GetInstance();
 
@@ -20,8 +20,7 @@ namespace QueryProcessor.Operations
 
             if(!match.Success)
             {
-                Console.WriteLine("Sintaxis de CREATE INDEX incorrecta.");
-                return OperationStatus.Error;
+                return new OperationResult { Status = OperationStatus.Error, Message = "Sintaxis de CREATE INDEX incorrecta." };
             }
 
             string indexName = match.Groups[1].Value;

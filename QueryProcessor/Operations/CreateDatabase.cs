@@ -7,7 +7,7 @@ namespace QueryProcessor.Operations
     {
 
 
-        internal OperationStatus Execute(string DataBaseName)
+        internal OperationResult Execute(string DataBaseName)
         {
             return Store.GetInstance().CreateDataBase(DataBaseName);
         }

@@ -11,7 +11,7 @@ namespace QueryProcessor.Operations
 {
     internal class Delete
     {
-        public OperationStatus Execute(string sentence)
+        public OperationResult Execute(string sentence)
         {
             var store = Store.GetInstance();
             var match = Regex.Match(sentence, @"DELETE\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+?))?$", RegexOptions.IgnoreCase);
@@ -19,7 +19,7 @@ namespace QueryProcessor.Operations
             if (!match.Success)
             {
                 Console.WriteLine("Sintaxis de Delete incorrecta.");
-                return OperationStatus.Error;
+                return new OperationResult { Status = OperationStatus.Error, Message = "Sintaxis de Delete incorrecta." };
             }
 
             string tableName = match.Groups[1].Value;

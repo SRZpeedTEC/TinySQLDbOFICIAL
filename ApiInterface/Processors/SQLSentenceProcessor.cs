@@ -17,13 +17,13 @@ namespace ApiInterface.Processors
             return response;
         }
 
-        private Response ConvertToResponse(OperationStatus result, object? data)
+        private Response ConvertToResponse(OperationResult result, object? data)
         {
             return new Response
             {
-                Status = result,
+                Status = result.Status,
                 Request = this.Request,
-                ResponseBody = "Comando Ejecutado", // Aqui se envia la informacion de la respuesta
+                ResponseBody = result.Message, // Aqui se envia la informacion de la respuesta
                 ResponseData = data
 
             };

@@ -12,7 +12,7 @@ namespace QueryProcessor.Operations
 {
     public class InsertInto
     {
-        internal OperationStatus Execute(string TableName, List<String> Valores)
+        internal OperationResult Execute(string TableName, List<String> Valores)
         {
             return Store.GetInstance().InsertInto(TableName, Valores);
         }

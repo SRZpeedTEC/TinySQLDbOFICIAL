@@ -70,40 +70,54 @@ namespace StoreDataManager
 
         ///////////////////////////////////////////////// INICIO FUNCIONES BASE DE DATOS /////////////////////////////////////////////////////
 
-        public OperationStatus CreateDataBase(string CreateDataBaseName)
+        public OperationResult CreateDataBase(string CreateDataBaseName)
         {
             // Creates a default DB called TESTDB
             if (Directory.Exists($@"{DataPath}\{CreateDataBaseName}")) 
             {
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La base de datos '{CreateDataBaseName}' ya existe."
+                };
+
             }
 
             Directory.CreateDirectory($@"{DataPath}\{CreateDataBaseName}");
 
-            AddDataBaseToSystemDataBases(CreateDataBaseName);
+            AddDataBaseToSystemDataBases(CreateDataBaseName);           
 
-            Console.WriteLine("Database created successfully");            
+            return new OperationResult
 
-            return OperationStatus.Success;
+            {
+                Status = OperationStatus.Success,
+                Message = $"La base de datos '{CreateDataBaseName}' ha sido creada."
+            };
         }
 
-        public OperationStatus SetDataBase(string SetDataBaseName)
+        public OperationResult SetDataBase(string SetDataBaseName)
         {
             string DataBasePath = $@"{DataPath}\{SetDataBaseName}";
 
             if (Directory.Exists(DataBasePath))
             {
-                Console.WriteLine($"Setted up in {SetDataBaseName} succesfully");
+               
                 this.SettedDataBasePath = DataBasePath;
                 this.SettedDataBaseName = SetDataBaseName;
                 Console.WriteLine($"Path {DataBasePath}");
-                return OperationStatus.Success;
+                return new OperationResult                 {
+                    Status = OperationStatus.Success,
+                    Message = $"Base de datos '{SetDataBaseName}' ha sido establecida."
+                };
 
             }
             else
-            {
-                Console.WriteLine("Database doesn't exist created");
-                return OperationStatus.Error;
+            {               
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La base de datos '{SetDataBaseName}' no existe."
+                };
             }
         }
 
@@ -153,21 +167,27 @@ namespace StoreDataManager
 
         ///////////////////////////////////////////////// INICIO FUNCIONES TABLAS //////////////////////////////////////////////////////////////
 
-        public OperationStatus CreateTable(string TableName, List<Column> TableColumns)
+        public OperationResult CreateTable(string TableName, List<Column> TableColumns)
         {
             // Validación de que haya una base de datos seteada
             if (string.IsNullOrEmpty(SettedDataBasePath))
-            {
-                Console.WriteLine("No se ha establecido una base de datos");
-                return OperationStatus.Error;
+            {               
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se ha establecido una base de datos."
+                };
             }
 
             string tablePath = $@"{SettedDataBasePath}\{TableName}.table";
 
             if (File.Exists(tablePath))
-            {
-                Console.WriteLine($"Tabla ya existente en {SettedDataBasePath}");
-                return OperationStatus.Error; // Cambiar a error si la tabla ya existe
+            {              
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La tabla '{TableName}' ya existe en la base de datos '{SettedDataBaseName}'."
+                };
             }
 
             using (FileStream stream = File.Open(tablePath, FileMode.Create))           
@@ -180,7 +200,11 @@ namespace StoreDataManager
             AddColumsToSystemColumns(TableName, TableColumns);
 
             Console.WriteLine($"Tabla '{TableName}' creada exitosamente en la base de datos '{SettedDataBaseName}'.");
-            return OperationStatus.Success;
+            return new OperationResult
+            {
+                Status = OperationStatus.Success,
+                Message = $"Tabla '{TableName}' creada exitosamente en la base de datos '{SettedDataBaseName}'."
+            };
         }
 
 
@@ -228,13 +252,16 @@ namespace StoreDataManager
         }
 
 
-        public OperationStatus DropTable(string TableToDrop)
+        public OperationResult DropTable(string TableToDrop)
         {
             // Validacion de que haya una base de datos setteada
             if (string.IsNullOrEmpty(SettedDataBasePath))
-            {
-                Console.WriteLine("No se ha establecido una base de datos");
-                return OperationStatus.Error;
+            {               
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se ha establecido una base de datos."
+                };
             }
 
             string tablePath = $@"{SettedDataBasePath}\{TableToDrop}";
@@ -251,23 +278,34 @@ namespace StoreDataManager
                     File.Delete(tablePath);
                 }
                 else
-                {
-                    Console.WriteLine("La tabla no está vacía, no se puede eliminar.");
-                    return OperationStatus.Error;
+                {                  
+                    return new OperationResult
+                    {
+                        Status = OperationStatus.Error,
+                        Message = "La tabla no está vacía, no se puede eliminar."
+                    };
                 }
             }
             
             else
             {
                 Console.WriteLine($"La tabla '{TableToDrop}' no existe.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La tabla '{TableToDrop}' no existe."
+                };
             }
 
             RemoveTableFromSystemTables(TableToDrop);
 
             RemoveColumnsFromSystemColumns(TableToDrop);
 
-            return OperationStatus.Success;
+            return new OperationResult
+            {
+                Status = OperationStatus.Success,
+                Message = $"La tabla '{TableToDrop}' ha sido eliminada."
+            };
         }
 
 
@@ -394,12 +432,16 @@ namespace StoreDataManager
         }
 
 
-        public OperationStatus InsertInto(string tableName, List<string> values)
+        public OperationResult InsertInto(string tableName, List<string> values)
         {
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
                 Console.WriteLine("No se ha establecido una base de datos.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se ha establecido una base de datos."
+                };
             }
             
 
@@ -407,17 +449,23 @@ namespace StoreDataManager
             List<string> tables = GetTablesInDataBase(SettedDataBaseName);
             if (!tables.Contains(tableName))
             {
-                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'."
+                };
             }
 
             // Obtener las columnas de la tabla
             List<Column> columns = GetColumnsOfTable(SettedDataBaseName, tableName);
 
             if (values.Count != columns.Count)
-            {
-                Console.WriteLine("El número de valores proporcionados no coincide con el número de columnas.");
-                return OperationStatus.Error;
+            {               
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "El número de valores proporcionados no coincide con el número de columnas."
+                };
             }
 
             // Validar y convertir los valores
@@ -434,9 +482,12 @@ namespace StoreDataManager
                     convertedValues.Add(convertedValue);
                 }
                 catch (Exception ex)
-                {
-                    Console.WriteLine($"Error al convertir el valor '{valueStr}' para la columna '{column.Name}': {ex.Message}");
-                    return OperationStatus.Error;
+                {                   
+                    return new OperationResult
+                    {
+                        Status = OperationStatus.Error,
+                        Message = $"Error al convertir el valor '{valueStr}' para la columna '{column.Name}': {ex.Message}"
+                    };
                 }
 
                 
@@ -451,8 +502,11 @@ namespace StoreDataManager
                     // Verificar si el valor ya existe en la columna
                     if (columnData.Contains(convertedValue))
                     {
-                        Console.WriteLine($"El valor '{convertedValue}' ya existe en la columna '{column.Name}', que tiene un índice asociado. No se puede insertar un valor duplicado.");
-                        return OperationStatus.Error; // Retornar error si el valor ya existe en la columna
+                        return new OperationResult 
+                        { 
+                            Status = OperationStatus.Error,
+                            Message = $"El valor '{convertedValue}' ya existe en la columna '{column.Name}', que tiene un índice asociado. No se puede insertar un valor duplicado."
+                        };
                     }
                 }
             }
@@ -470,13 +524,15 @@ namespace StoreDataManager
                         WriteValue(writer, value);
                     }
                 }
-
-                Console.WriteLine("Valores insertados correctamente.");
+               
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al insertar los valores en la tabla '{tableName}': {ex.Message}");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"Error al insertar los valores en la tabla '{tableName}': {ex.Message}"
+                };
             }
 
             // Regenerar los índices si la inserción fue exitosa
@@ -497,10 +553,18 @@ namespace StoreDataManager
             catch (Exception ex)
             {
                 Console.WriteLine($"Error al regenerar los índices: {ex.Message}");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"Error al regenerar los índices: {ex.Message}"
+                };
             }
 
-            return OperationStatus.Success;
+            return new OperationResult
+            {
+                Status = OperationStatus.Success,
+                Message = "Valores insertados correctamente."
+            };
         }
 
 
@@ -586,29 +650,38 @@ namespace StoreDataManager
 
 
         // esto es basicamente un add index to system indexes
-        public OperationStatus CreateIndex(string indexName, string tableName, string columnName, string indexType)
+        public OperationResult CreateIndex(string indexName, string tableName, string columnName, string indexType)
         {
             // Verificar que la base de datos está establecida
             if (string.IsNullOrEmpty(SettedDataBaseName))
-            {
-                Console.WriteLine("No se ha establecido una base de datos.");
-                return OperationStatus.Error;
+            {               
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se ha establecido una base de datos."
+                };
             }
 
             // Verificar que la tabla existe
             List<string> tables = GetTablesInDataBase(SettedDataBaseName);
             if (!tables.Contains(tableName))
             {
-                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'."
+                };
             }
 
             // Verificar que el tipo de índice sea válido (BST o BTREE)
             if (!indexType.Equals("BST", StringComparison.OrdinalIgnoreCase) &&
                 !indexType.Equals("BTREE", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"El tipo de índice '{indexType}' no es válido. Solo se permiten 'BST' o 'BTREE'.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"El tipo de índice '{indexType}' no es válido. Solo se permiten 'BST' o 'BTREE'."
+                };
             }
 
             // Obtener las columnas de la tabla
@@ -618,16 +691,22 @@ namespace StoreDataManager
             var column = allColumns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
             if (column == null)
             {
-                Console.WriteLine($"La columna '{columnName}' no existe en la tabla '{tableName}'.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La columna '{columnName}' no existe en la tabla '{tableName}'."
+                };
             }
 
             // Verificar si ya existe un índice asociado a la columna
             string existingIndex = GetIndexNameIfExist(SettedDataBaseName, tableName, columnName);
             if (existingIndex != null)
             {
-                Console.WriteLine($"Ya existe un índice asociado a la columna '{columnName}' en la tabla '{tableName}'. Índice existente: {existingIndex}");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"Ya existe un índice asociado a la columna '{columnName}' en la tabla '{tableName}'. Índice existente: {existingIndex}"
+                };
             }
 
             // Obtener los datos de la columna
@@ -636,8 +715,11 @@ namespace StoreDataManager
             // Verificar si hay datos duplicados
             if (columnData.Count != columnData.Distinct().Count())
             {
-                Console.WriteLine($"La columna '{columnName}' contiene datos duplicados. No se puede crear el índice.");
-                return OperationStatus.Error; // Retornar error si se encuentran datos duplicados
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La columna '{columnName}' contiene datos duplicados. No se puede crear el índice."
+                };
             }
 
             // Si no hay duplicados, proceder a crear el índice
@@ -655,9 +737,12 @@ namespace StoreDataManager
                 }
             }
 
-            Console.WriteLine($"Índice '{indexName}' creado exitosamente para la columna '{columnName}' en la tabla '{tableName}'.");
 
-            return OperationStatus.Success;
+            return new OperationResult
+            {
+                Status = OperationStatus.Success,
+                Message = $"Índice '{indexName}' creado exitosamente para la columna '{columnName}' en la tabla '{tableName}'."
+            };
         }
 
 
@@ -884,7 +969,7 @@ namespace StoreDataManager
 
         //////////////////////////////////////////////// INICIO FUNCIONES SELECT ///////////////////////////////////////////////////////
 
-        public OperationStatus SelectFromTable(string tableName, List<string> columnsToSelect, string whereClause, string orderByColumn, string orderByDirection, out object? data)
+        public OperationResult SelectFromTable(string tableName, List<string> columnsToSelect, string whereClause, string orderByColumn, string orderByDirection, out object? data)
            
         {
 
@@ -894,7 +979,11 @@ namespace StoreDataManager
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
                 Console.WriteLine("No se ha establecido una base de datos.");
-                return OperationStatus.Error;
+                return new OperationResult                 
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se ha establecido una base de datos."
+                };
             }
 
             // Verificar que la tabla existe
@@ -902,7 +991,11 @@ namespace StoreDataManager
             if (!tables.Contains(tableName))
             {
                 Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'."
+                };
             }
 
             // Obtener las columnas de la tabla
@@ -924,8 +1017,11 @@ namespace StoreDataManager
                     var col = allColumns.FirstOrDefault(c => c.Name.Equals(colName, StringComparison.OrdinalIgnoreCase));
                     if (col == null)
                     {
-                        Console.WriteLine($"La columna '{colName}' no existe en la tabla '{tableName}'.");
-                        return OperationStatus.Error;
+                        return new OperationResult
+                        {
+                            Status = OperationStatus.Error,
+                            Message = $"La columna '{colName}' no existe en la tabla '{tableName}'."
+                        };
                     }
                     selectedColumns.Add(col);
                 }
@@ -958,8 +1054,11 @@ namespace StoreDataManager
 
             if (records == null)
             {
-                Console.WriteLine("No se pudieron leer los registros de la tabla.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se pudieron leer los registros de la tabla."
+                };
             }
 
             if (!string.IsNullOrEmpty(whereClause))
@@ -967,7 +1066,11 @@ namespace StoreDataManager
                 records = FilteredRecordsWhere(records, whereClause, tableName, allColumns, mode, null, null);
                 if (records == null)
                 {
-                    return OperationStatus.Error;
+                    return new OperationResult
+                    {
+                        Status = OperationStatus.Error,
+                        Message = "Error al filtrar los registros."
+                    };
                 }
             }
          
@@ -977,7 +1080,11 @@ namespace StoreDataManager
                 records = FilteredRecordsOrderBy(records, orderByColumn, orderByDirection, tableName, allColumns);
                 if (records == null)
                 {
-                    return OperationStatus.Error;
+                    return new OperationResult
+                    {
+                        Status = OperationStatus.Error,
+                        Message = "Error al ordenar los registros."
+                    };
                 }
             }
 
@@ -1001,27 +1108,37 @@ namespace StoreDataManager
             // Mostrar los registros en formato de tabla
             PrintRecords(selectedColumns, records);
 
-            return OperationStatus.Success;
+            return new OperationResult
+            {
+                Status = OperationStatus.Success,
+                Message = "Registros seleccionados correctamente."
+            };
         }
 
 
         ///////////////////////////////////////////////// FUNCION UPDATE ///////////////////////////////////////////////////////
 
-        public OperationStatus UpdateFromTable(string tableName, string columnName, string newValue, string whereClause)
+        public OperationResult UpdateFromTable(string tableName, string columnName, string newValue, string whereClause)
         {
             // Verificar que la base de datos está establecida
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
-                Console.WriteLine("No se ha establecido una base de datos.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se ha establecido una base de datos."
+                };
             }
 
             // Verificar que la tabla existe
             List<string> tables = GetTablesInDataBase(SettedDataBaseName);
             if (!tables.Contains(tableName))
             {
-                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'."
+                };
             }
 
             // Obtener las columnas de la tabla
@@ -1032,16 +1149,22 @@ namespace StoreDataManager
 
             if (records == null)
             {
-                Console.WriteLine("No se pudieron leer los registros de la tabla.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se pudieron leer los registros de la tabla."
+                };
             }
 
             // Validar que la columna a actualizar existe
             var targetColumn = allColumns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
             if (targetColumn == null)
             {
-                Console.WriteLine($"La columna '{columnName}' no existe en la tabla '{tableName}'.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La columna '{columnName}' no existe en la tabla '{tableName}'."
+                };
             }
          
             try
@@ -1050,8 +1173,11 @@ namespace StoreDataManager
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al convertir el valor '{newValue}' para la columna '{columnName}': {ex.Message}");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"Error al convertir el valor '{newValue}' para la columna '{columnName}': {ex.Message}"
+                };
             }
 
             // Leer los registros de la tabla
@@ -1059,8 +1185,11 @@ namespace StoreDataManager
 
             if (!File.Exists(tablePath))
             {
-                Console.WriteLine($"El archivo de la tabla '{tableName}' no existe.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"El archivo de la tabla '{tableName}' no existe."
+                };
             }
 
             if (!string.IsNullOrEmpty(whereClause))
@@ -1068,7 +1197,11 @@ namespace StoreDataManager
                 records = FilteredRecordsWhere(records, whereClause, tableName, allColumns, mode, columnName, convertedValue);
                 if (records == null)
                 {
-                    return OperationStatus.Error;
+                    return new OperationResult
+                    {
+                        Status = OperationStatus.Error,
+                        Message = "Error al filtrar los registros."
+                    };                   
                 }
             }
             else
@@ -1105,14 +1238,18 @@ namespace StoreDataManager
             this.SettedDataBasePath = SettedDBPATH; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
             this.SettedDataBaseName = SettedDBNAME;
 
-            return OperationStatus.Success;
+            return new OperationResult
+            {
+                Status = OperationStatus.Success,
+                Message = "Valores actualizados correctamente."
+            };
 
         }
 
         ///////////////////////////////////////////////// FUNCION DELETE ///////////////////////////////////////////////////////
         
 
-        public OperationStatus DeleteFromTable(string tableName, string whereClause)
+        public OperationResult DeleteFromTable(string tableName, string whereClause)
         {
             // Verificar que la base de datos está establecida
             string mode = "DEFAULT";
@@ -1121,16 +1258,22 @@ namespace StoreDataManager
 
             if (string.IsNullOrEmpty(SettedDataBaseName))
             {
-                Console.WriteLine("No se ha establecido una base de datos.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se ha establecido una base de datos."
+                };
             }
 
             // Verificar que la tabla existe
             List<string> tables = GetTablesInDataBase(SettedDataBaseName);
             if (!tables.Contains(tableName))
             {
-                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = $"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'."
+                };
             }
 
             // Obtener las columnas de la tabla
@@ -1139,8 +1282,11 @@ namespace StoreDataManager
             List<Dictionary<string, object>> recordsToDelete = new List<Dictionary<string, object>>();
             if (records == null)
             {
-                Console.WriteLine("No se pudieron leer los registros de la tabla.");
-                return OperationStatus.Error;
+                return new OperationResult
+                {
+                    Status = OperationStatus.Error,
+                    Message = "No se pudieron leer los registros de la tabla."
+                };
             }
 
             if (!string.IsNullOrEmpty(whereClause))
@@ -1148,7 +1294,11 @@ namespace StoreDataManager
                 recordsToDelete = FilteredRecordsWhere(records, whereClause, tableName, allColumns, mode, null, null);
                 if (records == null)
                 {
-                    return OperationStatus.Error;
+                    return new OperationResult
+                    {
+                        Status = OperationStatus.Error,
+                        Message = "Error al filtrar los registros."
+                    };
                 }
             }
 
@@ -1178,7 +1328,11 @@ namespace StoreDataManager
             this.SettedDataBasePath = SettedDBPATH; //un ajuste para que la base de datos se mantenga setteada correctamente despues de actualizar los indices
             this.SettedDataBaseName = SettedDBNAME;
 
-            return OperationStatus.Success;
+            return new OperationResult
+            {
+                Status = OperationStatus.Success,
+                Message = "Registros eliminados correctamente."
+            };
         }
 
          

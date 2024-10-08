@@ -14,6 +14,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StoreDataManager", "StoreDa
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BA429044-79E0-4687-94CE-72A03E773EA2}"
 	ProjectSection(SolutionItems) = preProject
+		Client\scrip1.ps1 = Client\scrip1.ps1
 		Client\tinysqlclient.ps1 = Client\tinysqlclient.ps1
 	EndProjectSection
 EndProject

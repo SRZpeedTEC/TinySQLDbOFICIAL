@@ -16,13 +16,7 @@ namespace ApiInterface.Indexes
         {
             this.root = null;
             this.t = t;
-        }
-
-        // Función de búsqueda que devuelve el registro asociado a la clave
-        public Dictionary<string, object> Search(T key)
-        {
-            return root == null ? null : Search(root, key);
-        }
+        }       
 
         // Función recursiva de búsqueda que devuelve el registro
         private Dictionary<string, object> Search(BTreeNode<T> node, T key)
@@ -204,7 +198,5 @@ namespace ApiInterface.Indexes
                 GetAllRecordsRecursive(node.children[i], recordsList);
             }
         }
-
     }
-
 }

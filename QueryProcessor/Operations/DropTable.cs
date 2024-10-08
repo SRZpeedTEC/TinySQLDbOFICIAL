@@ -10,7 +10,7 @@ namespace QueryProcessor.Operations
 {
     internal class DropTable
     {
-        internal OperationStatus Execute(string TableToDrop)
+        internal OperationResult Execute(string TableToDrop)
         {
             return Store.GetInstance().DropTable(TableToDrop);
         }

@@ -5,7 +5,7 @@ namespace QueryProcessor.Operations
 {
     internal class SetDataBase
     {
-        internal OperationStatus Execute(string SetDataBaseName)
+        internal OperationResult Execute(string SetDataBaseName)
         {
             return Store.GetInstance().SetDataBase(SetDataBaseName);
         }
