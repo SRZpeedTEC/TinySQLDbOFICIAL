@@ -654,7 +654,7 @@ namespace StoreDataManager
         {
             // Verificar que la base de datos está establecida
             if (string.IsNullOrEmpty(SettedDataBaseName))
-            {               
+            {
                 return new OperationResult
                 {
                     Status = OperationStatus.Error,
@@ -737,6 +737,15 @@ namespace StoreDataManager
                 }
             }
 
+            string originalDBName = SettedDataBaseName;
+            string originalDBPath = SettedDataBasePath;
+
+            IndexGenerator indexGenerator = new IndexGenerator();
+            indexGenerator.RegenerateIndexes();
+
+            // Restaurar los valores originales de la base de datos
+            this.SettedDataBaseName = originalDBName;
+            this.SettedDataBasePath = originalDBPath;
 
             return new OperationResult
             {
@@ -744,7 +753,6 @@ namespace StoreDataManager
                 Message = $"Índice '{indexName}' creado exitosamente para la columna '{columnName}' en la tabla '{tableName}'."
             };
         }
-
 
 
 
