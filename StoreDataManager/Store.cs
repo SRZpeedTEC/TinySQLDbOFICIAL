@@ -742,7 +742,9 @@ namespace StoreDataManager
 
             IndexGenerator indexGenerator = new IndexGenerator();
             indexGenerator.RegenerateIndexes();
-
+            return OperationStatus.Success;
+        }
+                      
             // Restaurar los valores originales de la base de datos
             this.SettedDataBaseName = originalDBName;
             this.SettedDataBasePath = originalDBPath;
