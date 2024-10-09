@@ -741,9 +741,7 @@ namespace StoreDataManager
             string originalDBPath = SettedDataBasePath;
 
             IndexGenerator indexGenerator = new IndexGenerator();
-            indexGenerator.RegenerateIndexes();
-            return OperationStatus.Success;
-        }
+            indexGenerator.RegenerateIndexes();       
                       
             // Restaurar los valores originales de la base de datos
             this.SettedDataBaseName = originalDBName;
@@ -1618,22 +1616,32 @@ namespace StoreDataManager
 
             var recordValue = record[columnName];
 
+            // Convertir valueStr al tipo de recordValue
+            object convertedValue = ConvertValueDefault(valueStr, recordValue.GetType());
+
+            if (convertedValue == null)
+            {
+                Console.WriteLine($"No se pudo convertir '{valueStr}' al tipo {recordValue.GetType().Name}.");
+                return false;
+            }
+
             switch (operatorStr)
             {
                 case "=":
-                    return recordValue.ToString().Equals(valueStr, StringComparison.OrdinalIgnoreCase);
+                    return CompareValues(recordValue, convertedValue) == 0;
                 case ">":
-                    return CompareValues(recordValue, valueStr) > 0;
+                    return CompareValues(recordValue, convertedValue) > 0;
                 case "<":
-                    return CompareValues(recordValue, valueStr) < 0;
+                    return CompareValues(recordValue, convertedValue) < 0;
                 case "LIKE":
                     return recordValue.ToString().Contains(valueStr, StringComparison.OrdinalIgnoreCase);
                 case "NOT":
-                    return !recordValue.ToString().Equals(valueStr, StringComparison.OrdinalIgnoreCase);
+                    return CompareValues(recordValue, convertedValue) != 0;
                 default:
                     throw new Exception("Operador no soportado en WHERE.");
             }
         }
+
 
         private int CompareValues(object value1, object value2)
         {
@@ -1662,9 +1670,10 @@ namespace StoreDataManager
             }
             else
             {
-                throw new Exception("Tipos de datos no comparables o incompatibles.");
+                throw new Exception("Tipos de datos no comparables.");
             }
         }
+
 
         private void QuickSort(List<Dictionary<string, object>> records, int low, int high, string columnName, bool descending)
         {
@@ -1713,6 +1722,42 @@ namespace StoreDataManager
             records[index2] = temp;
         }
 
+        private object ConvertValueDefault(string valueStr, Type targetType)
+        {
+            try
+            {
+                if (targetType == typeof(int))
+                {
+                    if (int.TryParse(valueStr, out int intValue))
+                        return intValue;
+                }
+                else if (targetType == typeof(double))
+                {
+                    if (double.TryParse(valueStr, out double doubleValue))
+                        return doubleValue;
+                }
+                else if (targetType == typeof(string))
+                {
+                    return valueStr;
+                }
+                else if (targetType == typeof(DateTime))
+                {
+                    if (DateTime.TryParse(valueStr, out DateTime dateTimeValue))
+                        return dateTimeValue;
+                }
+                // Agregar otros tipos si es necesario
+            }
+            catch
+            {
+                throw new Exception("No se pudo transformar el dato.");
+            }
+
+            // Si no se pudo convertir, retornar null
+            return null;
+        }
+
     }
+
+
 
 }
