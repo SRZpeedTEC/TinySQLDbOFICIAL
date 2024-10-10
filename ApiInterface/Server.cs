@@ -6,12 +6,13 @@ using System.Text.Json;
 using ApiInterface.Exceptions;
 using ApiInterface.Processors;
 using ApiInterface.Models;
+using System.Diagnostics;
 
 namespace ApiInterface
 {
     public class Server
     {
-        private static IPEndPoint serverEndPoint = new(IPAddress.Loopback, 11000);
+        private static IPEndPoint serverEndPoint = new(IPAddress.Loopback, 12000);
         private static int supportedParallelConnections = 1;
 
         public static async Task Start()
@@ -25,18 +26,25 @@ namespace ApiInterface
 
             var indexGenerator = new IndexGenerator();
             indexGenerator.LoadIndexesAndGenerateTrees();
-            Console.WriteLine("Índices cargados y árboles generados en memoria.");
 
+            Console.WriteLine("Índices cargados y árboles generados en memoria.");
 
             while (true)
             {
                 var handler = await listener.AcceptAsync();
                 try
                 {
+
                     var rawMessage = GetMessage(handler);
+
+                    
                     var requestObject = ConvertToRequestObject(rawMessage);
                     var response = ProcessRequest(requestObject);
                     SendResponse(response, handler);
+
+                    
+
+                    
                 }
                 catch (Exception ex)
                 {
@@ -48,6 +56,8 @@ namespace ApiInterface
                     handler.Close();
                 }
             }
+
+
         }
 
 

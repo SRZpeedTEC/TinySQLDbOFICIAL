@@ -19,6 +19,7 @@ namespace ApiInterface
         {
             var store = Store.GetInstance();
             string systemIndexesFile = store.GetSystemIndexesFile();
+            store.LoadDataIntoMemory();
 
             if (!File.Exists(systemIndexesFile))
             {
@@ -215,6 +216,8 @@ namespace ApiInterface
             LoadIndexesAndGenerateTrees();
             Console.WriteLine("Actualización de índices completada.");
         }
+
+
 
 
 

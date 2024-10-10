@@ -8,6 +8,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ApiInterface.Indexes;
 using ApiInterface;
+using System.Xml.Linq;
+using System.Data.Common;
+using static System.Formats.Asn1.AsnWriter;
+using System.Globalization;
 
 
 namespace StoreDataManager
@@ -41,10 +45,17 @@ namespace StoreDataManager
 
         public Dictionary<string, object> IndexTrees = new Dictionary<string, object>();
         public Dictionary<string, string> AssociatedIndexesToColumns = new Dictionary<string, string>();
+
         public List<string> DataBasesWithIndexes = new List<string>();
         public List<string> TablesWithIndexes = new List<string>();
         public List<string> ColumnsWithIndexes = new List<string>();
 
+
+        Dictionary<string, string> columnsAndIndexes = new Dictionary<string, string>();
+        Dictionary<string, List<string>> dataBasesAndTables = new Dictionary<string, List<string>>();
+        Dictionary<string, List<Column>> tablesAndColumns = new Dictionary<string, List<Column>>();
+
+        
         
 
 
@@ -85,8 +96,10 @@ namespace StoreDataManager
 
             Directory.CreateDirectory($@"{DataPath}\{CreateDataBaseName}");
 
-            AddDataBaseToSystemDataBases(CreateDataBaseName);           
+            AddDataBaseToSystemDataBases(CreateDataBaseName);
 
+
+            LoadDataIntoMemory();
             return new OperationResult
 
             {
@@ -200,6 +213,7 @@ namespace StoreDataManager
             AddColumsToSystemColumns(TableName, TableColumns);
 
             Console.WriteLine($"Tabla '{TableName}' creada exitosamente en la base de datos '{SettedDataBaseName}'.");
+            LoadDataIntoMemory();
             return new OperationResult
             {
                 Status = OperationStatus.Success,
@@ -264,8 +278,9 @@ namespace StoreDataManager
                 };
             }
 
-            string tablePath = $@"{SettedDataBasePath}\{TableToDrop}";
 
+            string tablePath = Path.Combine(SettedDataBasePath, $"{TableToDrop}.table");
+            Console.WriteLine($"El path es {tablePath}");
             if (File.Exists(tablePath))
             {
                 
@@ -301,6 +316,7 @@ namespace StoreDataManager
 
             RemoveColumnsFromSystemColumns(TableToDrop);
 
+            LoadDataIntoMemory();
             return new OperationResult
             {
                 Status = OperationStatus.Success,
@@ -587,7 +603,7 @@ namespace StoreDataManager
                         throw new Exception("El valor no es un entero válido.");
                     }
                 case DataType.DOUBLE:
-                    if (double.TryParse(valueStr, out double doubleValue))
+                    if (double.TryParse(valueStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double doubleValue))
                     {
                         return doubleValue;
                     }
@@ -774,6 +790,7 @@ namespace StoreDataManager
                 return columnData; // Retorna una lista vacía si no hay nombre de base de datos
             }
 
+            
             // Verificar que la tabla existe en la base de datos especificada
             List<string> tables = GetTablesInDataBase(databaseName);
             if (!tables.Contains(tableName))
@@ -994,9 +1011,7 @@ namespace StoreDataManager
                 };
             }
 
-            // Verificar que la tabla existe
-            List<string> tables = GetTablesInDataBase(SettedDataBaseName);
-            if (!tables.Contains(tableName))
+           if (!IsTableInDatabase(SettedDataBaseName,tableName))
             {
                 Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
                 return new OperationResult
@@ -1006,19 +1021,18 @@ namespace StoreDataManager
                 };
             }
 
-            // Obtener las columnas de la tabla
-            List<Column> allColumns = GetColumnsOfTable(SettedDataBaseName, tableName);
+            List<Column> allColumns = tablesAndColumns[tableName];
 
             // Determinar las columnas a seleccionar
             List<Column> selectedColumns;
-            if (columnsToSelect == null)
+            if (columnsToSelect == null || columnsToSelect.Count == 0)
             {
                 // Seleccionar todas las columnas
                 selectedColumns = allColumns;
             }
             else
             {
-                // Validar que las columnas existen
+                // Validar que las columnas existen en la tabla
                 selectedColumns = new List<Column>();
                 foreach (var colName in columnsToSelect)
                 {
@@ -1055,7 +1069,7 @@ namespace StoreDataManager
             if (records == null || records.Count == 0)
 
             {
-                Console.WriteLine("no hay indices asoicados");
+                Console.WriteLine("no hay indices asociados");
                 records = GetRecordsFromTable(tableName, allColumns);
             }
 
@@ -1139,9 +1153,9 @@ namespace StoreDataManager
             }
 
             // Verificar que la tabla existe
-            List<string> tables = GetTablesInDataBase(SettedDataBaseName);
-            if (!tables.Contains(tableName))
+            if (!IsTableInDatabase(SettedDataBaseName, tableName))
             {
+                Console.WriteLine($"La tabla '{tableName}' no existe en la base de datos '{SettedDataBaseName}'.");
                 return new OperationResult
                 {
                     Status = OperationStatus.Error,
@@ -1150,8 +1164,36 @@ namespace StoreDataManager
             }
 
             // Obtener las columnas de la tabla
-            List<Column> allColumns = GetColumnsOfTable(SettedDataBaseName, tableName);
-            List<Dictionary<string, object>> records = GetRecordsFromTable(tableName, allColumns);                      
+            List<Column> allColumns = tablesAndColumns[tableName];
+
+
+            var records = new List<Dictionary<string, object>>();
+
+            if (DataBasesWithIndexes.Contains(SettedDataBaseName) && TablesWithIndexes.Contains(tableName))
+            {
+                foreach (var col in allColumns)
+                {
+                    string? indexName = GetAssociatedIndex(SettedDataBaseName, tableName, col.Name);
+                    if (indexName != null)
+                    {
+                        records = GetRecordsFromIndex(indexName);
+                        Console.WriteLine("USANDO INDICES EN MEMORIA PARA ESTE REQUEST");
+                        break;
+                    }
+                }
+            }
+
+
+            if (records == null || records.Count == 0)
+
+            {
+                Console.WriteLine("no hay indices asociados");
+                records = GetRecordsFromTable(tableName, allColumns);
+            }
+
+
+
+                            
             string mode = "UPDATE";
             object convertedValue;
 
@@ -1203,6 +1245,8 @@ namespace StoreDataManager
             if (!string.IsNullOrEmpty(whereClause))
             {
                 records = FilteredRecordsWhere(records, whereClause, tableName, allColumns, mode, columnName, convertedValue);
+                
+                
                 if (records == null)
                 {
                     return new OperationResult
@@ -1212,14 +1256,44 @@ namespace StoreDataManager
                     };                   
                 }
             }
+            
             else
             {
-                foreach(var record in records)
+                if (records.Count == 0)
+                {
+                    return new OperationResult
+                    {
+                        Status = OperationStatus.Warning,
+                        Message = $"El dato a eliminar no se encuentra en la tabla {tableName}."
+                    };
+
+                }
+
+                foreach (var record in records)
                 {
                     record[columnName] = convertedValue;
                 }               
             }
-          
+
+            // Verificar si la columna tiene un índice
+            string existingIndex = GetIndexNameIfExist(SettedDataBaseName, tableName, columnName);
+            if (existingIndex != null)
+            {
+                // Obtener los datos de la columna con el índice
+                List<object> columnData = GetColumnData(SettedDataBaseName, tableName, columnName);
+
+                // Verificar si el valor ya existe en la columna
+                if (columnData.Contains(convertedValue))
+                {
+                    return new OperationResult
+                    {
+                        Status = OperationStatus.Error,
+                        Message = $"El valor '{convertedValue}' ya existe en la columna '{columnName}', que tiene un índice asociado. No se puede insertar un valor duplicado."
+                    };
+                }
+            }
+
+
             using (FileStream fs = new FileStream(tablePath, FileMode.Create, FileAccess.Write))
             using (BinaryWriter writer = new BinaryWriter(fs))
             {
@@ -1300,7 +1374,8 @@ namespace StoreDataManager
             if (!string.IsNullOrEmpty(whereClause))
             {
                 recordsToDelete = FilteredRecordsWhere(records, whereClause, tableName, allColumns, mode, null, null);
-                if (records == null)
+                Console.WriteLine("registros filtrados ocrrectamente");
+                if (recordsToDelete == null)
                 {
                     return new OperationResult
                     {
@@ -1309,6 +1384,18 @@ namespace StoreDataManager
                     };
                 }
             }
+            
+
+            if (recordsToDelete.Count == 0)
+                {
+                return new OperationResult
+                {
+                    Status = OperationStatus.Warning,
+                    Message = $"El dato a eliminar no se encuentra en la tabla {tableName}."
+                };
+
+            }
+            
 
             records = records.Except(recordsToDelete).ToList();
 
@@ -1476,15 +1563,26 @@ namespace StoreDataManager
 
             else if(mode == "UPDATE")
             {
-                
+                bool isUpdated = false;
 
                 foreach (var record in records)
-                {                 
+                {   
+                    
                     if (EvaluateWhereCondition(record, whereColumn, whereOperator, whereValue))
                     {
                         record[settedColumn] = updateValue;
-                    }                 
+                        isUpdated = true;
+                    }   
+                    
+                    
                 }
+
+                if(!isUpdated)
+                {
+                    return records = null;
+                  
+                }
+
 
                 return records;
             }
@@ -1755,6 +1853,64 @@ namespace StoreDataManager
             // Si no se pudo convertir, retornar null
             return null;
         }
+
+
+        //FUNCIONES AUXILIARES PARA ALMACENAR DATOS EN MEMORIA Y MEJORAR LA EFICIENCIA
+
+        public void LoadDataIntoMemory()
+        {
+
+            dataBasesAndTables.Clear();
+            tablesAndColumns.Clear();
+            columnsAndIndexes.Clear();
+            
+
+            List<string> databases = GetAllDataBases();
+
+            foreach (var db in databases)
+            {
+                List<string> tables = GetTablesInDataBase(db);
+                dataBasesAndTables[db] = tables;
+                
+
+                foreach (var table in tables)
+                {
+                   
+                    List<Column> columns = GetColumnsOfTable(db, table);
+                    tablesAndColumns[table] = columns;
+
+                    foreach (var column in columns)
+                    {
+                        
+                        if (columnsAndIndexes.ContainsKey(column.Name))
+                        {
+                            string indexName = columnsAndIndexes[column.Name];
+                            columnsAndIndexes[column.Name] = indexName;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        public bool IsTableInDatabase(string dbName, string tableName)
+        {
+            return dataBasesAndTables.ContainsKey(dbName) && dataBasesAndTables[dbName].Contains(tableName);
+        }
+
+        public bool IsColumnInTable(string tableName, string columnName)
+        {
+            return tablesAndColumns.ContainsKey(tableName) && tablesAndColumns[tableName].Any(c => c.Name == columnName);
+        }
+
+        public bool IsColumnIndexed(string columnName)
+        {
+            return columnsAndIndexes.ContainsKey(columnName);
+        }
+
+
+
+
 
     }
 
