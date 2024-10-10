@@ -65,6 +65,11 @@ namespace QueryProcessor
                 {
                     return new SelectSystemColumns().Execute();
                 }
+                else if (sentence.Contains("FROM SystemIndexes", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new SelectSystemIndexes().Execute();
+                }
+
                 else 
                 {
                     // Implementar el SELECT normal sobre tablas de usuario
